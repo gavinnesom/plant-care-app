@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.production
+.env.*.local
+.vercel/
+plantpage.html
+.vercel
+.DS_Store
+*.log
+.cache/
+.vite/
+coverage/
+CHATGPT_HANDOFF.md
+HANDOFF.md
