@@ -1,8 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const identifyPlant = require('../api/identify-plant.js');
-
-const { extractJson, parseMultipartImage, validatePlantResult } = identifyPlant._test;
+const { extractJson, parseMultipartImage, validatePlantResult } = require('../api/plant-identification-core');
 
 function validRawResult(overrides = {}) {
   return {

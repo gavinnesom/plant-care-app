@@ -13,7 +13,7 @@ The approved product direction is now a private personal garden field guide with
 - Multipart POST to `/api/identify-plant`.
 - Server-side image parsing and validation.
 - OpenAI Responses API call with image input.
-- Strict JSON extraction and normalization.
+- Strict JSON extraction and normalization through a testable server-side core module.
 - Care card rendering with confidence, alternatives, trait badges, warnings, expandable sections, and fun fact.
 - Upstash/Vercel KV-backed rate limiting before OpenAI calls.
 - Debug status panel hidden unless `?debug=1`.

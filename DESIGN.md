@@ -5,7 +5,7 @@
 The current app is a small Vite React frontend plus one Vercel-compatible serverless function.
 
 - The frontend owns file selection, local preview, loading/error state, and result rendering.
-- The API route owns multipart parsing, image validation, rate limiting, OpenAI calls, JSON extraction, and response normalization.
+- The API route owns request orchestration, image validation, rate limiting, OpenAI calls, and response handling. `api/plant-identification-core.js` owns multipart image extraction, model JSON extraction, and result normalization.
 - There is no current database, authentication, persistent storage, or saved plant model.
 
 ## Current Data Flow
@@ -14,7 +14,7 @@ The current app is a small Vite React frontend plus one Vercel-compatible server
 2. Client validation checks image type and size.
 3. `App` sends `FormData` with one `image` file to `/api/identify-plant`.
 4. `api/identify-plant.js` rate-limits the request before expensive work.
-5. The API parses the multipart body, validates the image, calls OpenAI Responses with image input, extracts JSON, validates required fields, and returns `{ result, warning }`.
+5. The API uses `api/plant-identification-core.js` to extract the multipart image and normalize the model JSON, validates the image, calls OpenAI Responses with image input, and returns `{ result, warning }`.
 6. `ResultPanel` renders confidence, alternatives, care traits, warnings, and care sections.
 
 ## Module Responsibilities
@@ -24,7 +24,8 @@ The current app is a small Vite React frontend plus one Vercel-compatible server
 - `src/components/ResultPanel.jsx`: empty, loading, and result states for the current care card.
 - `src/components/TraitBadge.jsx` and `src/components/CareIcon.jsx`: visual care trait rendering.
 - `src/lib/plantSchema.js`: shared frontend constants and trait copy.
-- `api/identify-plant.js`: server boundary for validation, rate limiting, OpenAI interaction, and normalized result shape.
+- `api/identify-plant.js`: server boundary for request orchestration, image validation, rate limiting, OpenAI interaction, and response handling.
+- `api/plant-identification-core.js`: testable server-side parsing and normalization for multipart image input and OpenAI JSON output.
 
 ## Important Invariants
 

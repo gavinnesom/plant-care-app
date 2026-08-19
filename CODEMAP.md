@@ -40,7 +40,8 @@ flowchart TD
 | `src/components/CareIcon.jsx` | Inline SVG care icons |
 | `src/lib/plantSchema.js` | Frontend schema constants and trait copy |
 | `src/index.css` | Tailwind import and app color variables |
-| `api/identify-plant.js` | Serverless API, rate limiting, OpenAI call, result normalization |
+| `api/identify-plant.js` | Serverless API orchestration, rate limiting, OpenAI call, response |
+| `api/plant-identification-core.js` | Multipart image extraction, model JSON extraction, normalized result validation |
 | `tests/identify-plant.test.cjs` | Unit tests for existing API helper behavior |
 
 ## How To Change
@@ -48,7 +49,7 @@ flowchart TD
 | If you want to... | Start in... | Then inspect... | Verify with... |
 |---|---|---|---|
 | Change current upload validation | `src/components/UploadPanel.jsx` | `src/lib/plantSchema.js`, `api/identify-plant.js` | `npm test`, `npm run build` |
-| Change result fields or care sections | `api/identify-plant.js` | `src/components/ResultPanel.jsx`, `src/lib/plantSchema.js` | `npm test`, `npm run build` |
+| Change result fields or care sections | `api/plant-identification-core.js` | `api/identify-plant.js`, `src/components/ResultPanel.jsx`, `src/lib/plantSchema.js` | `npm test`, `npm run build` |
 | Change OpenAI prompt or model behavior | `api/identify-plant.js` | `README.md`, `DESIGN.md` | `npm test`, manual `npx vercel dev` check with credentials |
 | Add My Garden persistence | `DESIGN.md` | `PROJECT.md`, `TODO.md`, future Supabase schema | Add focused unit/integration tests before UI wiring |
 | Add project-specific browser tests | new `playwright.config.*` | `tests/e2e/`, README commands | project Playwright command |
