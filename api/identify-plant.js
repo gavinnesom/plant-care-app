@@ -403,7 +403,7 @@ async function callOpenAI({ imageBuffer, mimeType }) {
   return validatePlantResult(extractJson(outputText));
 }
 
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed.' });
@@ -461,4 +461,11 @@ module.exports = async function handler(req, res) {
 
     return res.status(status).json({ error: message });
   }
+}
+
+module.exports = handler;
+module.exports._test = {
+  extractJson,
+  parseMultipartImage,
+  validatePlantResult,
 };
