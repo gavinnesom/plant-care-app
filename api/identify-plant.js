@@ -1,6 +1,6 @@
 const { Ratelimit } = require('@upstash/ratelimit');
 const { Redis } = require('@upstash/redis');
-const { extractJson, parseMultipartImage, validatePlantResult } = require('./plant-identification-core');
+const { extractJson, parseMultipartImage, validatePlantResult } = require('../server/plant-identification-core');
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -42,6 +42,15 @@ function readBody(req) {
 function devLog(method, message, data) {
   if (!isDevelopment) return;
   console[method](message, data);
+}
+
+function logServerError(error, status) {
+  console.error('[Plant ID API] Request failed', {
+    status,
+    name: error.name,
+    message: error.message,
+    stack: error.stack?.split('\n').slice(0, 3).join('\n'),
+  });
 }
 
 function hasRateLimitConfig() {
@@ -325,10 +334,7 @@ async function handler(req, res) {
     return res.status(200).json({ result, warning });
   } catch (error) {
     const status = error.statusCode || 500;
-    devLog('error', '[Plant ID API] Request failed', {
-      status,
-      message: error.message,
-    });
+    logServerError(error, status);
     const message =
       status >= 500 && !error.exposeMessage
         ? 'Plant identification is temporarily unavailable. Check server logs and API key configuration.'

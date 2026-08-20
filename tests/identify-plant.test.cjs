@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
-const { extractJson, parseMultipartImage, validatePlantResult } = require('../api/plant-identification-core');
+const { extractJson, parseMultipartImage, validatePlantResult } = require('../server/plant-identification-core');
 
 function validRawResult(overrides = {}) {
   return {
@@ -126,4 +128,10 @@ test('validatePlantResult rejects missing required care sections', () => {
       ),
     /Invalid or missing sections\.sunlight/
   );
+});
+
+test('plant-identification core does not live in the Vercel API route directory', () => {
+  const apiCorePath = path.join(__dirname, '..', 'api', 'plant-identification-core.js');
+
+  assert.equal(fs.existsSync(apiCorePath), false);
 });

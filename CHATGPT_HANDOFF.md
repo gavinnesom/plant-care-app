@@ -6,116 +6,110 @@ Implemented.
 
 ## Source
 
-ChatGPT review of Codex's completed standards-foundation work in draft PR #1 for `gavinnesom/plant-care-app`.
+ChatGPT review of the completed Part 1 release report and Gavin's real production test of `https://plants.gavinnesom.com` on 2026-08-19 at approximately 10:52 AM PT.
 
 ## Objective
 
-Finish Part 1 cleanly by replacing the test-only `_test` export with a coherent testable module boundary and correcting the handoff status/reporting, without expanding the milestone.
+Diagnose and repair the production plant-identification failure introduced or exposed by the Part 1 release, while also correcting the unintended Vercel function created from the shared module under `api/`. Prove the repair with a real end-to-end identification request before asking Gavin to merge it.
 
 ## Background
 
-Codex completed the standards-and-foundation handoff on branch `codex/plant-id-standards-foundation` and opened draft PR #1:
+Part 1 was squash-merged to `main` in PR #1 and released:
 
-`https://github.com/gavinnesom/plant-care-app/pull/1`
+- Squash commit: `748832ee99a4c2dace8ea0478a332f3805356d53`
+- Production site: `https://plants.gavinnesom.com`
+- Intended API route: `/api/identify-plant`
 
-The work added the canonical project documents, a small unit-test foundation, and four passing tests. The only application-code change exposed existing API helpers through an exported `_test` object on `api/identify-plant.js`.
+Gavin subsequently performed a real production identification using a Cordyline photograph. The UI returned:
 
-That test-only production export is a shortcut rather than a durable responsibility boundary. The same helpers should instead live in a small, coherently named server-side module that is imported normally by both the Vercel handler and the tests. This should remain a limited behavior-preserving correction, not become a wider refactor.
+> Plant identification is temporarily unavailable. Check server logs and API key configuration.
 
-The completed handoff also retained `Status: Active` and described the final Git status ambiguously. The final handoff should say `Implemented` and report the actual final status plainly.
+Part 1 also moved multipart parsing and result normalization into `api/plant-identification-core.js`. Vercel built that file as an additional public serverless function because it sits directly under `api/`.
 
 ## Current scope
 
-- Continue on the existing branch `codex/plant-id-standards-foundation` and update draft PR #1.
-- Inspect the current `_test` export and the helpers used by `tests/identify-plant.test.cjs`.
-- Remove the test-only `_test` export from the production API handler.
-- Extract only the existing pure or independently testable helpers needed by the tests into a coherently named server-side module.
-- Import those helpers normally from both `api/identify-plant.js` and the tests.
-- Preserve the Vercel handler's expected export and all runtime behavior.
-- Update `CODEMAP.md`, `DESIGN.md`, or other project documents only if the extraction changes a documented path or responsibility.
-- Update this handoff's outcome and set its final status to `Implemented`.
-- Add a normal follow-up commit, push the existing branch, and update the existing draft PR.
-
-## Implementation strategy
-
-Choose the smallest module boundary that reflects a real server-side responsibility. Do not create a generic `utils` or `helpers` bucket merely to satisfy the tests.
-
-Move only the functions required for a clean test boundary and any constants inseparable from them. Keep request orchestration and Vercel handler behavior in the current API entry point.
-
-Add concise narrative comments only where the extracted logic contains a genuinely non-obvious domain step, constraint, or transition. Do not add comments as decoration or perform broad formatting.
-
-Use a new follow-up commit rather than rewriting or force-pushing the existing branch history.
+- Work only in `/Users/gavinnesom/Code/plant-id-starter` and the linked Plant ID Vercel project.
+- Create a focused hotfix branch.
+- Replace the repository's current canonical `CHATGPT_HANDOFF.md` with this handoff.
+- Inspect production deployment/log evidence and verify environment-variable presence without printing secret values.
+- Reproduce the failure safely if logs are insufficient.
+- Move the shared plant-identification core module out of the top-level `api/` route directory.
+- Update the API handler, unit tests, and applicable project documentation for the new path.
+- Add the smallest repair supported by the evidence.
+- Run local verification, push the hotfix branch, open a draft pull request targeting `main`, and inspect the resulting Vercel Preview.
+- Perform a genuine successful plant-identification POST against the preview.
+- Stop with a verified draft PR and preview. Do not merge or deploy to production without Gavin's separate authorization.
 
 ## Constraints and non-goals
 
-- Do not begin Part 2 or implement My Garden, Supabase, authentication, saved plants, multiple photographs, or print/PDF features.
-- Do not broaden this into a general API or frontend refactor.
-- Do not change user-visible behavior, response shape, validation rules, rate limits, OpenAI behavior, or styling.
-- Do not add production dependencies unless a currently verified requirement makes one unavoidable; none is expected.
-- Do not modify MemoryEngine, Gavin's standards repository, or anything outside the Plant ID repository.
-- Do not create another branch or pull request.
-- Do not merge PR #1, push to `main`, deploy to production, or change external data or environment variables.
-- An automatic Vercel Preview update caused by pushing the existing branch is allowed.
-
-## Acceptance criteria
-
-- `api/identify-plant.js` no longer exposes a test-only `_test` object.
-- Tests import the relevant functions through a normal coherent module boundary.
-- Existing runtime behavior and API response behavior remain unchanged.
-- All existing tests pass without reducing coverage or weakening assertions.
-- The production build passes.
-- Applicable project documentation still describes the actual file map and responsibilities.
-- The final handoff status is `Implemented`.
-- The implementation outcome states the final Git status unambiguously.
-- A normal follow-up commit is pushed to the existing branch and appears in draft PR #1.
-- No Part 2 work, merge, main-branch push, or production deployment occurs.
+- Do not begin Part 2 or implement My Garden, persistence, Supabase, access control, saved plants, multiple photographs, identity overrides, locations, care redesign, or print/PDF features.
+- Do not alter the approved product direction in the README.
+- Do not perform a general frontend, API, module-system, test, dependency, or architecture refactor.
+- Do not change prompts, response schemas, rate-limit policy, styling, or user-visible behavior unless the demonstrated defect specifically requires a narrowly justified correction.
+- Do not add or update dependencies unless the diagnosed repair genuinely requires one.
+- Do not modify MemoryEngine, Gavin's standards repository, unrelated Vercel projects, domains, or any repository other than Plant ID.
+- Do not display, commit, copy into files, or report secret values from Vercel logs or environment variables.
+- Do not alter production environment variables or other external configuration without explicit Gavin authorization.
+- Do not push directly to `main`.
+- Do not merge the pull request or trigger a production deployment in this handoff.
+- Do not claim the repair works based only on `HEAD`, GET, build success, unit tests, or the existence of the API route. A successful preview identification POST is required.
 
 ## Verification
 
 - `npm test`
 - `npm run build`
-- `git diff --check`
-- Confirm the handler export remains compatible with the existing Vercel route.
-- Confirm `git status --short` is clean after committing and pushing the completed handoff outcome.
-- Report the follow-up commit SHA, changed files, exact check results, and updated draft PR URL.
-
-## Assumptions and open questions
-
-- The existing branch and draft PR are still available and contain only the authorized Part 1 work.
-- A small coherent extraction is possible without changing behavior. If it is not, stop and explain why rather than preserving `_test` automatically or beginning a larger refactor.
-- No product decision is required for this correction.
+- `git diff --check origin/main...HEAD`
+- Inspect the Vercel Preview's deployed functions/routes.
+- Confirm the preview homepage loads.
+- Confirm a non-POST request to `/api/identify-plant` produces the expected 405 behavior.
+- Make one real multipart plant-identification POST to the preview and confirm a 200 response containing a valid `result`.
+- Confirm `/api/plant-identification-core` is absent or returns the expected not-found response rather than behaving as a deployed function.
 
 ## Codex implementation outcome
 
-Implemented by Codex on 2026-08-19.
+Implemented by Codex on 2026-08-20.
 
-Branch: `codex/plant-id-standards-foundation`
+Initial local state:
 
-Draft PR updated: `https://github.com/gavinnesom/plant-care-app/pull/1`
+- Branch: `main`
+- Commit: `748832ee99a4c2dace8ea0478a332f3805356d53`
+- `git status --short`: clean
+
+Hotfix branch:
+
+- `codex/plant-id-production-hotfix`
+
+Production evidence and diagnosis:
+
+- Vercel production deployment `dpl_CtttDLcHDYMx9wJfKQZCw27A63p5` exposed both intended `api/identify-plant` and unintended `api/plant-identification-core` functions because the shared module lived directly under `api/`.
+- `OPENAI_API_KEY`, `KV_REST_API_URL`, and `KV_REST_API_TOKEN` were present and scoped to Production/Preview. Values were hidden by Vercel and were not printed or copied.
+- Historical production error-log queries around the reported failure did not return error details.
+- One authorized production POST using a non-sensitive public Cordyline image reproduced the failure: `HTTP 500` with the generic unavailable message.
+- Immediate production logs showed only a serverless POST request envelope for `/api/identify-plant` with no error detail. Root cause evidence: the handler catch path logged via `devLog`, which is disabled in production, so production 500s were not diagnosable from logs.
+- The implemented repair moves the shared core module out of the Vercel route directory and adds sanitized production-safe server error logging. No secrets were exposed.
 
 Changed files:
 
-- `api/plant-identification-core.js`: added the coherent server-side module for multipart image extraction, model JSON extraction, and plant-result normalization.
-- `api/identify-plant.js`: removed the test-only `_test` export and imported the core functions through the normal module boundary while preserving `module.exports = handler`.
-- `tests/identify-plant.test.cjs`: imports the tested functions from `api/plant-identification-core.js` instead of the production handler.
-- `CODEMAP.md`: updated the repository map and change guide for the new server-side module.
-- `DESIGN.md`: updated architecture and module responsibilities to distinguish request orchestration from parsing/normalization.
-- `PROJECT_STATUS.md`: recorded that JSON extraction and normalization now live in a testable server-side core module.
-- `CHATGPT_HANDOFF.md`: replaced the previous completed handoff with this active handoff and outcome, with final status set to `Implemented`.
+- `api/identify-plant.js`: imports the core module from `server/plant-identification-core.js` and logs sanitized server errors from the catch path.
+- `server/plant-identification-core.js`: relocated multipart image extraction, model JSON extraction, and plant-result normalization.
+- `api/plant-identification-core.js`: removed so Vercel will not expose it as a route.
+- `tests/identify-plant.test.cjs`: imports from the relocated server module and adds a regression check that the core module is not in `api/`.
+- `CODEMAP.md`, `DESIGN.md`, `PROJECT_STATUS.md`: updated path and responsibility documentation.
+- `CHATGPT_HANDOFF.md`: replaced with this hotfix handoff and outcome.
 
-Verification:
+Local verification before commit:
 
 ```text
 npm test
 ```
 
-Passed: 4 tests, 0 failures.
+Passed: 5 tests, 0 failures.
 
 ```text
 npm run build
 ```
 
-Passed. Vite reported the same warnings as before: its CJS Node API build is deprecated, and Browserslist/caniuse-lite data is 13 months old.
+Passed. Vite still reports the known CJS Node API deprecation and stale Browserslist/caniuse-lite warnings.
 
 ```text
 git diff --check
@@ -123,8 +117,4 @@ git diff --check
 
 Passed with no whitespace errors.
 
-Handler export compatibility was checked directly: `api/identify-plant.js` ends with `module.exports = handler;` and no longer exports `_test`.
-
-No My Garden, Supabase, authentication, saved plants, multiple photographs, print/PDF, styling, response-shape, rate-limit, OpenAI behavior, MemoryEngine, production environment, merge, main-branch push, or production deployment work was performed.
-
-Final `git status --short` after committing and pushing this follow-up was clean.
+No Part 2 work, My Garden, Supabase, authentication, saved plants, multiple photographs, print/PDF, styling, response schema, prompt, rate-limit policy, production environment, MemoryEngine, main-branch push, merge, or production deployment was performed.
