@@ -111,7 +111,6 @@ OPENAI_MODEL=gpt-4.1-mini
 Add Supabase settings for server-side rate limiting:
 
 ```bash
-SUPABASE_URL=your_supabase_project_url
 SUPABASE_DB_URL=your_server_only_supabase_database_url
 PLANT_ID_IP_LIMIT=15
 PLANT_ID_IP_WINDOW=1 h
@@ -134,7 +133,7 @@ The app is only working end-to-end when clicking `Identify plant` sends a multip
 
 1. Connect the repo to Vercel.
 2. Add `OPENAI_API_KEY` in Vercel project settings.
-3. Add `SUPABASE_URL` and the server-only `SUPABASE_DB_URL` used by the shared GavinApps Supabase project.
+3. Add the server-only `SUPABASE_DB_URL` used by the shared GavinApps Supabase project.
 4. Apply the tracked Plant ID migration in `supabase/migrations/202608200001_plant_id_rate_limits.sql`.
 5. Optionally add `OPENAI_MODEL` and rate-limit override values.
 6. Deploy.
@@ -180,7 +179,7 @@ Production behavior:
 
 Recommended Vercel setup:
 
-- Add `OPENAI_API_KEY`, `SUPABASE_URL`, and `SUPABASE_DB_URL` for both Preview and Production.
+- Add `OPENAI_API_KEY` and `SUPABASE_DB_URL` for both Preview and Production.
 - Keep all API keys and database credentials server-side only.
 
 ## Important Files

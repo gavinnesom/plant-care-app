@@ -42,7 +42,6 @@ Required server-side environment variables:
 ```text
 OPENAI_API_KEY
 OPENAI_MODEL
-SUPABASE_URL
 SUPABASE_DB_URL
 PLANT_ID_IP_LIMIT
 PLANT_ID_IP_WINDOW

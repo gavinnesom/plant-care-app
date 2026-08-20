@@ -2,195 +2,134 @@
 
 ## Status
 
-Active.
+Implemented.
 
 ## Source
 
-ChatGPT review of Codex's blocked production-hotfix work in draft PR #2, followed by Gavin's decision to consolidate Plant ID on the existing Supabase project used by MemoryEngine and Miscellany.
+ChatGPT review of the completed Part 1 production-hotfix work in draft PR #2, followed by Gavin's authorization to finish and release it.
 
 ## Objective
 
-Complete the Part 1 production hotfix by replacing the broken Upstash/Vercel KV rate limiter with an isolated Supabase-backed rate limiter in the existing shared Supabase project. Remove Redis and Upstash from Plant ID completely rather than retaining fallback, compatibility, commented, or “just in case” code. Prove the finished hotfix with a real plant identification on the Vercel Preview, then stop for merge authorization.
+Finish Part 1 cleanly: remove any unused Supabase configuration, finalize the project handoff and PR, squash-merge PR #2 into `main`, allow Vercel to deploy it, and prove that Plant ID works on the production custom domain with one real identification request.
 
 ## Background
 
-Part 1 was released from PR #1 as squash commit `748832ee99a4c2dace8ea0478a332f3805356d53`.
+Part 1 was originally released from PR #1 as squash commit `748832ee99a4c2dace8ea0478a332f3805356d53`, after which production identification failed at the old Redis/Upstash rate-limit boundary.
 
-Production identification subsequently failed. Codex diagnosed the actual failing boundary in draft PR #2:
+The corrective work has now been implemented in draft PR #2:
 
+- Repository: `gavinnesom/plant-care-app`
 - Branch: `codex/plant-id-production-hotfix`
-- Draft PR: `https://github.com/gavinnesom/plant-care-app/pull/2`
-- Root cause: the configured Upstash/Vercel KV hostname does not resolve, so rate limiting fails before the OpenAI request.
-- `OPENAI_API_KEY` is present; the demonstrated failure was not at the OpenAI boundary.
-- The shared core module has already been moved from `api/` to `server/`, removing the unintended Vercel function.
-- Sanitized production-safe error logging has been added.
-- Unit tests and the frontend build pass, but the real preview identification still returns 500 because of the broken Redis endpoint.
+- PR: `https://github.com/gavinnesom/plant-care-app/pull/2`
+- Reviewed head: `a369068432b3efa227de9ea7430e9181acf583ba`
+- Redis/Upstash packages, code, and Vercel environment variables have been removed.
+- The rate limiter now uses isolated Plant ID objects in Gavin's existing Supabase project.
+- MemoryEngine and Miscellany were not changed.
+- The shared server module has been moved out of `api/`, so Vercel exposes only the intended `api/identify-plant` function.
+- Nine tests and the frontend build passed.
+- A real Vercel Preview identification returned `200` with a valid Cordyline result and rate-limit headers.
+- Vercel reports a successful check on the current PR head.
 
-Gavin has chosen not to rebuild Upstash. Plant ID will use the same Supabase project as MemoryEngine and Miscellany because My Garden was already expected to use that project. Plant ID must own clearly isolated database objects and must not alter or depend on MemoryEngine's tables, authentication model, APIs, or domain logic.
-
-Redis contains no valuable Plant ID data; it holds only disposable rate-limit counters. No counter migration or preservation is required.
+One cleanup remains: the implementation appears to use only `SUPABASE_DB_URL`, while `SUPABASE_URL` may now be unused. Confirm this from the code rather than assuming it.
 
 ## Current scope
 
-- Continue on the existing branch `codex/plant-id-production-hotfix` and update draft PR #2; do not create another branch or PR.
-- Confirm the working tree and branch are clean and synchronized before continuing. Never discard unexpected work.
-- Replace the repository's canonical `CHATGPT_HANDOFF.md` with this handoff. Do not append multiple handoffs or create timestamped repository copies.
-- Follow the applicable global, project, and standards instructions naturally.
-- Identify the existing Supabase project already used by MemoryEngine and Miscellany through the configured local/project tooling. Do not guess or create a second Supabase project.
-- Inspect only enough of the shared project's existing database conventions to avoid collisions and preserve isolation.
-- Add a reproducible, tracked Plant ID database migration owned by the Plant ID repository.
-- Create the minimum Plant ID-specific table(s), function(s), indexes, grants, and cleanup behavior needed for atomic server-side rate limiting.
-- Use a clearly isolated `plant_id` schema when compatible with the current shared-project conventions and API exposure. Otherwise use unmistakably Plant ID-prefixed objects with restrictive grants. Document the chosen boundary.
-- Preserve the current externally visible rate-limit policy: per-client protection, a global daily limit, rate-limit responses, retry information, and fail-closed production behavior. Preserve the configured defaults of 15 requests per client per hour and 100 requests globally per day unless an implementation detail requires a documented equivalent.
-- Store only the minimum information required for rate limiting. Avoid indefinitely retaining raw client addresses; use bounded retention and cleanup appropriate to the selected design.
-- Call the rate-limit operation only from the serverless API using a server-only Supabase secret. Do not expose a Supabase secret or administrative client in the browser bundle.
-- Add the required Supabase URL and server-secret variables to the Plant ID Vercel project for Preview and Production, using the current Supabase key convention already supported by the shared project. Do not print or copy secret values into logs, output, source, tests, or documentation.
-- Replace the existing Upstash rate-limit implementation completely with the Supabase implementation.
-- Remove all active Redis/Upstash packages, imports, initialization, environment-variable fallbacks, configuration examples, tests, and documentation from Plant ID.
-- Remove `@upstash/ratelimit` and `@upstash/redis` from both the package manifest and lockfile.
-- Remove the obsolete `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `KV_REST_API_URL`, and `KV_REST_API_TOKEN` variables from the Plant ID Vercel project after the Supabase preview configuration is in place.
-- Disconnect an obsolete Upstash/KV integration from the Plant ID Vercel project if it is clearly scoped to this project and can be disconnected without affecting another application. Do not delete a provider account or shared resource when ownership is uncertain.
-- Update tests and project documentation so Supabase is the sole active rate-limit backend and the file map remains accurate.
-- Commit and push the completed work to the existing hotfix branch, update draft PR #2, and inspect the resulting Vercel Preview.
-- Perform a genuine successful multipart plant-identification POST against the Preview. One OpenAI call for this proof remains authorized.
-- Update this handoff's outcome and set its final status to `Implemented` before the final commit or an explicit follow-up documentation commit.
-- Stop with a verified draft PR. Do not merge or deploy to production without Gavin's separate authorization.
+- Continue on `codex/plant-id-production-hotfix` and PR #2. Do not create another branch or PR.
+- Confirm the branch, PR head, and working tree before changing anything. Do not discard unexpected work.
+- Determine whether `SUPABASE_URL` has any runtime use in Plant ID.
+- If it is unused, remove it from repository examples/documentation and from the Plant ID Vercel Preview and Production environments. Do not retain unused configuration for possible future use.
+- If it is genuinely required, retain it and document its exact runtime use in the handoff and final report.
+- Update the canonical repository `CHATGPT_HANDOFF.md` to describe the completed implementation accurately, set its status to `Implemented`, and remove stale or pending statements. Do not try to record the final documentation commit's own SHA inside that commit.
+- Update the PR title if necessary so it describes the actual Supabase-backed production hotfix rather than only the earlier route-packaging fix.
+- Commit and push the final cleanup to the existing branch and PR.
+- Mark PR #2 ready for review, then squash-merge it into `main`. This handoff explicitly authorizes that merge and the resulting Vercel production deployment.
+- After deployment, verify the production custom domain and make one real plant-identification request.
+- Fast-forward the local `main` after the successful release and report the final state.
 
 ## Implementation strategy
 
-Keep this as a focused completion of the existing hotfix:
-
-1. Resolve the correct existing Supabase project and its migration/object conventions.
-2. Design the smallest atomic PostgreSQL rate-limit operation that preserves the current policy and provides the handler with allowed/denied state, remaining allowance, and reset/retry timing.
-3. Commit the schema/function definition as a reproducible Plant ID-owned migration and apply only those Plant ID objects to the shared Supabase project.
-4. Replace the handler's Redis rate-limit boundary with the Supabase boundary.
-5. Remove Redis/Upstash code, dependencies, variables, compatibility paths, and active documentation completely.
-6. Verify unit behavior and the production build.
-7. Configure the Plant ID Preview safely and prove a real end-to-end identification.
-8. Remove the obsolete Plant ID Redis variables/integration and verify that Redis is no longer required anywhere in the deployed Preview.
-
-Use a single atomic database function or equivalent transaction-safe operation rather than a read-then-write sequence that can exceed limits under concurrency. Keep database-specific code behind a small server-side responsibility boundary rather than spreading Supabase calls through the request handler.
-
-Do not keep Redis as a fallback. If Supabase rate limiting is unavailable in production, fail closed with the existing service-unavailable behavior and sanitized logging.
+1. Re-read the applicable global, project, and Gavin AI standards instructions, then inspect the current branch, working tree, PR state, and current Vercel check.
+2. Search the application, server code, configuration, tests, and documentation for `SUPABASE_URL`. Remove it everywhere in Plant ID, including Vercel Preview and Production, only if the code confirms it is unused.
+3. Finalize `CHATGPT_HANDOFF.md`. Record the implementation and pre-merge verification that actually occurred; production verification can be reported in Codex's final response because it happens after the merge.
+4. Run the appropriate safe pre-merge checks, commit the finalization, push it, and confirm PR #2 is current and mergeable with a successful Vercel check.
+5. If the final commit changes only documentation or removes a confirmed-unused environment variable, do not spend another OpenAI call on Preview. If runtime behavior changes, repeat the real Preview identification before merging.
+6. Mark PR #2 ready and squash-merge it into `main` with a clear title and body that summarize the Supabase rate-limit hotfix and removal of Redis/Upstash.
+7. Wait for the production Vercel deployment and custom-domain alias to become ready.
+8. Verify production at `https://plants.gavinnesom.com`, including one authorized real identification request.
+9. Pull local `main` with `git pull --ff-only` and report the squash commit, deployment, production checks, and clean working-tree state.
 
 ## Constraints and non-goals
 
-- Do not begin the My Garden feature work beyond the minimal database and server configuration required for rate limiting.
-- Do not create saved-plant, photograph, identity, care, unlock-session, or user-account tables in this hotfix.
-- Do not alter MemoryEngine or Miscellany tables, migrations, functions, storage, authentication, RLS policies, APIs, code repositories, or application configuration.
-- Do not modify the shared Supabase project's existing objects except where a narrowly scoped grant or exposure setting is strictly necessary for the new Plant ID objects. Document any such setting before applying it.
-- Do not create another Supabase project.
-- Do not retain Redis packages, fallback code, commented code, dormant adapters, unused environment-variable support, or “temporary” compatibility branches.
-- Do not change the OpenAI prompt, identification response schema, UI, styling, or product direction.
-- Do not weaken or remove rate limiting merely to make the preview succeed.
-- Do not expose database secrets, OpenAI credentials, raw environment values, or unnecessarily retained client identifiers.
-- Do not delete an Upstash account, database, or possibly shared external resource. Removing Plant ID's obsolete code, variables, and clearly scoped project connection is authorized; broader provider deletion is not.
-- Do not push directly to `main`.
-- Do not merge PR #2 or trigger a production deployment in this handoff.
+- Do not begin Part 2 or implement My Garden, persistence UI, authentication, multi-photo identification, or other new product features.
+- Do not reintroduce Redis, Upstash, fallback code, compatibility code, commented remnants, or unused packages/configuration.
+- Do not delete Gavin's Upstash provider account or unrelated provider resources.
+- Do not change MemoryEngine or Miscellany code, tables, authentication, APIs, or domain logic.
+- Do not alter the new Supabase schema, functions, or rate-limiter behavior unless a blocking defect is discovered before merge. If one is found, stop and report it rather than improvising another implementation round.
+- Do not expose secrets or print secret values in logs, diffs, commits, the handoff, or the final response.
+- Do not use destructive Git operations or overwrite unexpected local changes.
+- One production OpenAI identification request is explicitly authorized for the final smoke test. Do not make unnecessary additional paid requests.
+- If the production verification fails, stop and report the exact failing boundary. Do not make unplanned code or environment changes after the merge.
 
 ## Acceptance criteria
 
-- Supabase is the only active Plant ID rate-limit backend.
-- The rate-limit database objects are clearly Plant ID-owned, reproducible from the Plant ID repository, and isolated from MemoryEngine and Miscellany.
-- The server-side rate-limit operation is atomic and preserves per-client and global limits with useful remaining/reset information.
-- Rate-limit rows have bounded retention or an explicit safe cleanup strategy.
-- The Vercel API uses a server-only Supabase secret that is absent from frontend output and repository files.
-- `@upstash/ratelimit` and `@upstash/redis` are absent from `package.json` and the lockfile.
-- No runtime code supports `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `KV_REST_API_URL`, or `KV_REST_API_TOKEN`.
-- No Redis fallback, adapter, commented implementation, unused abstraction, or active Redis setup documentation remains.
-- The obsolete Redis/KV variables are removed from the Plant ID Vercel Preview and Production configurations after the Supabase variables are configured.
-- The intended `api/identify-plant` function remains the only Plant ID API function deployed by Vercel; `/api/plant-identification-core` remains absent.
-- Existing tests pass and focused tests cover the new rate-limit boundary and fail-closed behavior without calling the live shared database during the unit suite.
-- The frontend production build passes.
-- A real multipart identification POST to the Vercel Preview returns HTTP 200 with a valid plant result.
-- Draft PR #2 contains the completed hotfix, is pushed and clean, and remains unmerged.
-- No MemoryEngine/Miscellany object or behavior changes, main push, or production deployment occur.
-- The final handoff status is `Implemented` with an unambiguous outcome.
+- PR #2 contains the completed Supabase-backed rate-limit hotfix and no Redis/Upstash application code, dependency, or Plant ID environment configuration.
+- `SUPABASE_URL` is either removed everywhere because it is unused or retained with a precise documented runtime reason.
+- The canonical handoff is internally consistent, marked `Implemented`, and contains no stale “pending” implementation language.
+- The PR title and description accurately summarize its final scope.
+- Required tests, build, diff checks, and Vercel checks pass before merge.
+- PR #2 is squash-merged into `main` and Vercel deploys that commit to `https://plants.gavinnesom.com`.
+- Production homepage returns `200`.
+- A non-POST request to `/api/identify-plant` returns `405` and advertises `POST` as allowed.
+- The obsolete helper route is not deployed as a serverless endpoint.
+- One real production plant-identification POST returns `200`, a valid identification payload, and the expected rate-limit headers/counter behavior.
+- Local `main` is fast-forwarded to the released squash commit and the final working tree is clean.
 
 ## Verification
 
-- Record initial and final branch, commit, and `git status --short`.
-- Record the Plant ID database objects created and confirm no existing shared-project objects were modified unexpectedly.
-- Verify the migration can be applied reproducibly and does not depend on manually created hidden database state.
+Before merge:
+
+- Record `git status --short`, current branch, local HEAD, and PR head.
+- Confirm searches find no Redis/Upstash packages, imports, rate-limit implementation, or Plant ID Vercel environment variables.
+- Confirm the final `SUPABASE_URL` decision against actual code usage.
 - Run `npm test`.
 - Run `npm run build`.
-- Run `git diff --check origin/main...HEAD` after committing.
-- Search the manifest, lockfile, runtime source, examples, and active documentation for Redis/Upstash dependencies and configuration. Historical outcome text may state that Redis was removed; no executable or setup path may remain.
-- Confirm the built frontend contains no Supabase server secret.
-- Inspect the Vercel Preview's functions and routes.
-- Confirm the Preview homepage returns 200.
-- Confirm a non-POST request to `/api/identify-plant` returns the expected 405.
-- Confirm `/api/plant-identification-core` returns 404 and is not deployed as a function.
-- Make one real multipart POST with a non-sensitive plant image and confirm HTTP 200 with a valid `result`.
-- Verify the database rate-limit counters were updated by that request without printing a raw client identifier.
-- Confirm the obsolete Redis/KV variables are absent from the Plant ID Vercel project and the Supabase variables have the intended Preview/Production scopes.
-- Confirm final `git status --short` is clean after committing and pushing.
-- Report the commit SHA, changed files, exact check results, draft PR URL, Preview URL, database objects, environment-variable names/scopes, deployed functions, and real POST result.
+- Run `git diff --check origin/main...HEAD`.
+- Confirm PR #2 is mergeable and its required Vercel check is successful.
+
+After merge and deployment:
+
+- Confirm the production deployment is Ready and the custom domain aliases to it.
+- Request the homepage and confirm `200`.
+- Make a non-destructive non-POST request to `/api/identify-plant` and confirm `405` with `Allow: POST`.
+- Confirm the former unintended helper route is absent.
+- Submit one real production identification using a suitable plant image; confirm `200`, a valid response, and rate-limit headers.
+- Record the final squash commit and confirm local `main` matches it with a clean working tree.
 
 ## Assumptions and open questions
 
-- The existing shared Supabase project is active and accessible through Gavin's configured tooling.
-- The shared project has enough free-plan capacity for this negligible additional rate-limit traffic.
-- The Plant ID Vercel project can receive server-only Supabase configuration without changing MemoryEngine or Miscellany deployments.
-- A current Supabase server secret can be used or created without rotating keys used by other projects. If doing so would require rotating or revoking an existing shared key, stop and request authorization.
-- If the existing shared project has no safe migration ownership convention, choose and document a minimal Plant ID-owned migration location rather than editing another repository.
-- If applying the migration or configuring Vercel requires broader changes than the Plant ID-specific objects and variables authorized here, stop and report the exact blocker.
+- Gavin has authorized the squash merge, production deployment, Vercel environment cleanup, and one real production OpenAI identification request.
+- The reviewed PR head may advance when this handoff is finalized; Codex should report the actual final pre-merge and squash commit SHAs.
+- No product-design decision is required in this step. Part 2 begins only after this release is proven and Gavin provides a new handoff.
 
 ## Codex implementation outcome
 
-Implemented on 2026-08-20.
+Implemented on 2026-08-20 before merge.
 
 - Branch: `codex/plant-id-production-hotfix`.
-- Draft PR: `https://github.com/gavinnesom/plant-care-app/pull/2`.
-- Implementation commit: `4c9f02b478a3c0eda274cfa2531ae5a08cd6aad3`.
-- Final documentation/outcome commit: pending at time of this outcome edit.
-- Verified Preview: `https://plant-care-cezkcxmpf-gavins-projects-a20eaba9.vercel.app`.
+- PR: `https://github.com/gavinnesom/plant-care-app/pull/2`.
+- Reviewed starting head: `a369068432b3efa227de9ea7430e9181acf583ba`.
+- `SUPABASE_URL` decision: removed. Runtime code, server code, tests, examples, and docs were searched; Plant ID only reads `SUPABASE_DB_URL` for the Supabase/Postgres rate limiter.
+- Removed `SUPABASE_URL` from `.env.example`, README deployment/setup guidance, `PROJECT_STATUS.md`, and Plant ID Vercel Preview/Production environment variables.
+- Updated the PR title/body to describe the Supabase-backed production hotfix.
 
-Created and applied Plant ID-owned Supabase objects from `supabase/migrations/202608200001_plant_id_rate_limits.sql`:
+Pre-merge verification:
 
-- schema `plant_id`;
-- table `plant_id.rate_limit_buckets`;
-- primary-key index `rate_limit_buckets_pkey`;
-- cleanup index `plant_id_rate_limit_buckets_cleanup_idx`;
-- function `plant_id.check_rate_limit(...)`.
-
-The migration was applied to the existing shared GavinApps Supabase project. Only the new `plant_id` schema objects were created or inspected; no MemoryEngine or Miscellany tables, functions, storage, application code, or domain behavior were modified. The rate limiter stores hashed client keys and bounded fixed-window counters, and cleanup runs during normal checks.
-
-Redis/Upstash was removed from active Plant ID code and setup:
-
-- removed `@upstash/ratelimit` and `@upstash/redis` from `package.json` and `package-lock.json`;
-- removed Redis imports, initialization, env fallbacks, and runtime support;
-- removed active Redis/KV setup documentation and examples;
-- confirmed no active Redis/Upstash references remain outside this historical handoff text.
-
-Vercel Plant ID environment configuration now contains these names only for the hotfix dependencies:
-
-- `OPENAI_API_KEY`: Preview and Production;
-- `SUPABASE_URL`: Preview and Production;
-- `SUPABASE_DB_URL`: Preview and Production.
-
-The obsolete Plant ID Vercel variables `KV_REST_API_TOKEN`, `KV_REST_API_URL`, `KV_REST_API_READ_ONLY_TOKEN`, `KV_URL`, and `REDIS_URL` were removed. `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` were already absent. The first Supabase DB URL attempt used the direct Supabase host and failed in Preview with DNS `ENOTFOUND`; Plant ID was then updated to the verified Supabase transaction pooler URL through Vercel stdin without printing the secret value.
-
-Verification completed:
-
+- Initial branch status was clean on `codex/plant-id-production-hotfix` at `a369068432b3efa227de9ea7430e9181acf583ba`.
+- PR #2 source/target confirmed as `codex/plant-id-production-hotfix` into `main`; PR was clean and Vercel check was successful.
+- Redis/Upstash active-reference scan remained clean outside historical handoff text.
+- `SUPABASE_URL` active-reference scan confirmed no runtime use before removal.
 - `npm test`: pass, 9 tests.
 - `npm run build`: pass; Vite CJS and stale Browserslist warnings only.
-- `git diff --check`: pass before implementation commit.
-- Redis/Upstash active-reference scan: pass.
-- Built frontend secret scan for Supabase/OpenAI/database markers: pass.
-- Supabase migration apply: pass.
-- Supabase live function probe: pass.
-- Vercel Preview deployment inspect: Ready, target Preview, only function `api/identify-plant`.
-- Preview homepage via authenticated `vercel curl`: HTTP 200.
-- Preview `GET /api/identify-plant`: HTTP 405 with `Allow: POST`.
-- Preview `/api/plant-identification-core`: HTTP 404 and not deployed as a function.
-- Real multipart Preview POST with public Cordyline image: HTTP 200, valid `result`, `commonName` `Cordyline`, `scientificName` `Cordyline australis`, confidence `0.85`, rate-limit headers present.
-- Database counter summary after Preview POST: `client` scope had 2 bucket rows / total count 2; `global` scope had 1 bucket row / total count 2. Raw client identifiers were not printed.
+- `git diff --check origin/main...HEAD`: pass.
 
-Warnings:
-
-- `npm install` / `npm uninstall` surfaced existing npm audit vulnerability counts; no dependency-audit remediation was in this handoff scope.
-- Repeated `npx vercel` calls used temporary npm caches because the home npm cache has permission issues; the Vercel CLI also emitted package deprecation notices and an npm major-version notice.
-- Plain unauthenticated `curl` to Preview returned Vercel SSO protection redirects, so route and POST checks used authenticated `vercel curl`.
-
-No merge, main push, production deployment, provider-account deletion, or unauthorized shared-project change was performed. PR #2 remains a draft and unmerged.
+Production verification is intentionally not recorded here because it occurs after this committed handoff update and the PR squash merge.
