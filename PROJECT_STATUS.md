@@ -2,20 +2,20 @@
 
 ## Current State
 
-Plant ID is a working Vite, React, Tailwind, and Vercel serverless plant-identification app. The current implementation supports one uploaded image at a time, local preview, server-side rate limiting, OpenAI vision identification, structured response validation, low-confidence warnings, a rendered care card, and a private My Garden foundation.
+Plant ID is a working Vite, React, Tailwind, and Vercel serverless plant-identification app. The current implementation supports selected photo sets of up to 5 uploaded images, local previews, server-side rate limiting, OpenAI vision identification, structured response validation, low-confidence warnings, a rendered care card, and a private My Garden foundation.
 
 ## What Works
 
-- Single JPG, PNG, or WebP upload up to 8 MB.
-- Local browser preview.
+- Up to 5 JPG, PNG, or WebP uploads, each up to 8 MB.
+- Local browser previews with add/remove before identification.
 - Multipart POST to `/api/identify-plant`.
-- Server-side image parsing and validation.
-- OpenAI Responses API call with image input.
+- Server-side image-set parsing and validation, including max count and aggregate size.
+- OpenAI Responses API call with all selected images in one request.
 - Strict JSON extraction and normalization through a testable server-side core module outside the Vercel API route directory.
 - Care card rendering with confidence, alternatives, trait badges, warnings, expandable sections, and fun fact.
 - Supabase-backed rate limiting before OpenAI calls using isolated Plant ID database objects.
 - Owner-key unlock with a secure 30-day per-device Garden session.
-- Private My Garden list, Grow form with one optional manual photo, individual plant page with one-photo add/replace, detail-page soft delete, editable Plant Type, and separate AI ID.
+- Private My Garden list, Grow form with zero/one/multiple optional photos, individual plant page with multiple saved photos, photo add/remove, explicit saved-plant AI identification/re-identification, detail-page soft delete, editable Plant Type, and separate AI ID.
 - Server-side throttling for repeated failed owner-key unlock attempts.
 - Private server-authorized saved photo retrieval from isolated Plant ID Supabase/Postgres objects.
 - Debug status panel hidden unless `?debug=1`.
@@ -71,9 +71,9 @@ PLANT_ID_FORCE_RATE_LIMIT
 
 - No multi-photo identification, AI reassessment history, full personalized care guide, diagnosis workflow, print/PDF output, search, filtering, or Miscellany integration exists yet.
 - No project-specific browser tests exist yet.
-- The current API schema is care-card oriented rather than saved-plant oriented.
+- AI reassessment history is not user-facing yet; saved plants retain the current/latest useful AI ID only.
 - Local end-to-end identification depends on `npx vercel dev` and valid local secrets.
 
 ## Last Implementation Summary
 
-Part 2 added the private My Garden foundation: owner unlock, signed 30-day sessions, isolated Garden plant/photo tables, authorized Garden APIs, Grow creation from manual entry or an identification, individual plant edit pages, and a warmer first-pass garden visual refresh.
+Part 3 added multiple-photo identification sets, multiple private saved photos per plant, explicit saved-plant AI identification/re-identification, photo removal, and fixed the manual Grow-with-photo save boundary by increasing bounded JSON body handling and correcting empty AI assessment normalization.

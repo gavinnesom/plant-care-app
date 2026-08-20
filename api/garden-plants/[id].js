@@ -7,7 +7,7 @@ function readJson(req) {
     let total = 0;
     req.on('data', (chunk) => {
       total += chunk.length;
-      if (total > 128 * 1024) {
+      if (total > 34 * 1024 * 1024) {
         reject(new Error('Request body is too large.'));
         req.destroy();
         return;

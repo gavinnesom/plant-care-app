@@ -6,21 +6,21 @@ Plant ID is becoming Gavin's personal garden field guide. It should identify pla
 
 ## Background
 
-The app began as a polished one-photo plant-identification demo. It already has a working upload flow, Vercel serverless API route, OpenAI vision call, response validation, uncertainty messaging, and rate limiting. The approved README now expands the direction from a temporary identification card to private saved plant records.
+The app began as a polished one-photo plant-identification demo. It now has a working multi-photo upload flow, Vercel serverless API routes, OpenAI vision calls, response validation, uncertainty messaging, rate limiting, and a private saved Garden foundation.
 
 ## Users and Contexts
 
 - Gavin can use temporary identification on desktop or phone.
-- Gavin can later unlock private My Garden on his MacBook and phone.
+- Gavin can unlock private My Garden on his MacBook and phone.
 - Public visitors may use temporary identification but must not view or modify My Garden.
 
 ## Current Milestone
 
-The current milestone is standards foundation only: document the project accurately, preserve the current identification app, and add a small unit-test foundation.
+The current milestone is Part 3: multiple-photo identification and saved-plant AI reassessment while preserving Gavin's authority over Plant Type.
 
 ## Current Non-Goals
 
-This milestone does not implement My Garden, Supabase persistence, owner unlocking, multi-photo identification, saved plant records, print/PDF output, search, filtering, or Miscellany integration.
+This milestone does not implement long-form personalized care guides, problem diagnosis workflows, print/PDF output, search, filtering, conventional multi-user accounts, or Miscellany integration.
 
 ## Product Principles
 
@@ -29,14 +29,15 @@ This milestone does not implement My Garden, Supabase persistence, owner unlocki
 - A saved plant requires only a plant name.
 - Recorded identity and AI assessment must remain visibly distinct.
 - Manual or nursery-supplied identity must not block requesting an AI assessment.
-- Private garden reads, writes, and photograph requests must be authorized server-side when implemented.
+- Private garden reads, writes, AI reassessment, and photograph requests must be authorized server-side.
 
 ## Approved Future Direction
 
-My Garden is private and intended only for Gavin. It will use one fixed owner passphrase, no username or registration interface, a server-side passphrase secret, and a long-lived secure device session. Plant ID is expected to reuse the existing GavinApps Supabase project with separate Plant ID tables and private photograph storage. It must not use or modify MemoryEngine tables, API, authentication, or domain model. Deletion should initially be recoverable with useful creation and modification timestamps retained.
+My Garden is private and intended only for Gavin. It uses one fixed owner passphrase, no username or registration interface, a server-side passphrase secret, and a long-lived secure device session. Plant ID reuses the existing GavinApps Supabase project with separate Plant ID tables and private photograph storage. It must not use or modify MemoryEngine tables, API, authentication, or domain model. Plant and photo deletion should remain recoverable with useful creation and modification timestamps retained.
 
 ## Success Criteria
 
-- Current temporary identification remains useful and safe.
-- Project documents describe actual code and approved direction without pretending deferred features exist.
+- Temporary multi-photo identification remains useful and safe.
+- My Garden keeps Plant Type and AI ID visibly separate.
+- Saved plants can store multiple private photos and request explicit AI reassessment.
 - The next implementation pass can start from documented architecture, commands, risks, and decisions.
