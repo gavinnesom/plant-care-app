@@ -1,6 +1,6 @@
 # Plant ID Agent Notes
 
-Plant ID is a Vite, React, Tailwind, and Vercel serverless app. The current app identifies one uploaded plant photo; the approved direction is a private personal garden field guide where Gavin can save individual plants later.
+Plant ID is a Vite, React, Tailwind, and Vercel serverless app. The current app identifies one uploaded plant photo and includes the private My Garden foundation for saved individual plants.
 
 ## Required Reading
 
@@ -23,7 +23,7 @@ Use `npx vercel dev` for end-to-end identification because plain `npm run dev` s
 ## Invariants
 
 - Keep OpenAI and Supabase database credentials server-side only.
-- Do not implement My Garden, Supabase persistence, owner unlocking, multi-photo identification, printing, or Miscellany integration without explicit scope.
+- Do not implement multi-photo identification, full care/diagnosis generation, printing, or Miscellany integration without explicit scope.
 - Preserve the distinction between temporary AI identification, recorded identity, identity source, and future saved plant records.
 - Do not modify MemoryEngine tables, APIs, authentication, or domain model.
 - Do not push to `main`, merge PRs, deploy production, or change production environment variables without explicit authority.

@@ -2,21 +2,30 @@
 
 @layer base {
   :root {
-    --app-page: #3b4247;
-    --app-shell: #505a63;
-    --app-card: #273036;
-    --app-panel: #687681;
-    --app-panel-soft: #eef3f0;
-    --app-border: rgba(217, 224, 225, 0.22);
-    --app-border-strong: rgba(217, 224, 225, 0.34);
-    --app-text: #f5f0e7;
-    --app-text-muted: #d7cec3;
-    --app-ink: #1f292f;
-    --app-ink-muted: #59656d;
-    --app-accent: #6ee7b7;
-    --app-accent-strong: #34d399;
-    --app-warning: #f8d28a;
-    --app-danger: #f3a2a6;
+    --app-page: #6f735a;
+    --app-shell: #7f6b50;
+    --app-card: #3e4631;
+    --app-panel: #8b7b5d;
+    --app-panel-soft: #f4efe2;
+    --app-border: rgba(247, 239, 220, 0.28);
+    --app-border-strong: rgba(247, 239, 220, 0.42);
+    --app-text: #fff7e8;
+    --app-text-muted: #e7dac1;
+    --app-ink: #2c271d;
+    --app-ink-muted: #665d4c;
+    --app-accent: #a6c36f;
+    --app-accent-strong: #7fa44d;
+    --app-warning: #e6c36a;
+    --app-danger: #b55b63;
+    --app-bark: #594735;
+    --app-leaf: #b9d989;
+    --app-moss: #cfe3a3;
+    --app-moss-dark: #4e6d31;
+    --app-gold: #d7b45e;
+    --app-gold-soft: #f4e4b6;
+    --app-plum: #7b3f62;
+    --app-plum-dark: #5e2f4a;
+    --app-bramble-soft: rgba(123, 63, 98, 0.18);
   }
 
   * {
@@ -38,5 +47,82 @@
   button,
   input {
     font: inherit;
+  }
+
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .garden-button {
+    border-radius: 8px;
+    border: 1px solid var(--app-border);
+    background: var(--app-bark);
+    color: var(--app-text);
+    font-size: 0.875rem;
+    font-weight: 900;
+    padding: 0.75rem 1rem;
+    transition:
+      background 160ms ease,
+      transform 160ms ease;
+  }
+
+  .garden-button:hover {
+    background: #6b553e;
+  }
+
+  .garden-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+
+  .garden-button-primary {
+    background: var(--app-leaf);
+    color: #1f2618;
+  }
+
+  .garden-button-primary:hover {
+    background: #c9e899;
+  }
+
+  .garden-input {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--app-border);
+    background: var(--app-panel-soft);
+    color: var(--app-ink);
+    font-weight: 700;
+    padding: 0.75rem 0.9rem;
+    outline: none;
+  }
+
+  .garden-input:focus {
+    border-color: var(--app-leaf);
+    box-shadow: 0 0 0 3px rgba(185, 217, 137, 0.22);
+  }
+
+  .form-label {
+    color: var(--app-text-muted);
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .garden-tile {
+    border-radius: 16px;
+    border: 1px solid var(--app-border);
+    background: var(--app-card);
+    padding: 1rem;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
+    transition:
+      border-color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .garden-tile:hover {
+    border-color: var(--app-leaf);
+    transform: translateY(-1px);
   }
 }

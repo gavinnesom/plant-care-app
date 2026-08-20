@@ -2,41 +2,31 @@
 
 ## Next
 
-1. Decide the exact Supabase schema for My Garden.
-   - Why: saved individual plants need durable records, photographs, identity history, recoverable deletion, and timestamps before UI work starts.
-   - Verify: schema review plus tests for access boundaries and record lifecycle.
+1. Add Part 3 multi-photo identification sets.
+   - Why: current Part 2 Garden photos support saved records, but identification still accepts one photo.
+   - Verify: add/remove photo UI, server parsing, and saved-photo reassessment tests.
 
-2. Decide owner session lifetime and cookie/security details.
-   - Why: My Garden must be private, available on MacBook and phone, and protected server-side.
-   - Verify: documented threat model and server-side authorization tests.
-
-3. Decide photograph storage and retention rules.
-   - Why: plant records need photos, but storage cost, privacy, deletion, and thumbnails need explicit handling.
-   - Verify: storage adapter tests and private URL/access checks.
-
-4. Decide whether AI assessments are single-current or historical.
-   - Why: the product direction requires AI assessment to remain distinct from recorded identity; history changes the data model.
+2. Add AI reassessment history for saved plants.
+   - Why: AI ID is separated from Plant Type, but only the current initial assessment is exposed.
    - Verify: data model examples for manual identity, nursery label identity, AI accepted identity, and repeated assessments.
+
+3. Add full personalized care and problem-diagnosis sections to individual plant pages.
+   - Why: the Part 2 page is structured for this, but does not yet generate or store care-guide content.
+   - Verify: care/diagnosis UI and persistence tests.
 
 ## Deferred Implementation
 
-1. Implement My Garden browsing as a simple card list or grid.
-   - Search and filtering remain deferred until the collection is large enough to justify them.
-
-2. Add multi-photo identification sets.
+1. Add multi-photo identification sets.
    - Include add/remove photo behavior and clear temporary vs saved flows.
 
-3. Add private owner unlock and server-side authorization.
-   - No username, registration, or account-management UI.
-
-4. Add personalized care and problem-diagnosis guides for saved plants.
+2. Add personalized care and problem-diagnosis guides for saved plants.
    - Use individual environment and history, not only species-level care.
 
-5. Add condensed printable two-sided care sheets.
+3. Add condensed printable two-sided care sheets.
    - Must not contradict the full record, but does not need full content parity.
 
-6. Add project-specific browser tests once saved flows exist.
+4. Add project-specific browser tests for saved flows.
    - Keep generic smoke checks separate from product behavior tests.
 
-7. Resolve canonical Vercel project cleanup.
+5. Resolve canonical Vercel project cleanup.
    - Legacy notes say `plant-care-app` owns `plants.gavinnesom.com`, while a separate `plant-id-starter` Vercel project may also exist.

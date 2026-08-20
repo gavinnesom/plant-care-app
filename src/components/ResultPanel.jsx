@@ -5,7 +5,7 @@ function confidenceLabel(confidence) {
   return `${Math.round((confidence || 0) * 100)}%`;
 }
 
-export function ResultPanel({ result, loading }) {
+export function ResultPanel({ result, loading, onAddToGarden }) {
   if (loading) {
     return (
       <section className="rounded-[18px] border border-[var(--app-border)] bg-[var(--app-shell)] p-3 shadow-2xl shadow-black/20 sm:p-4">
@@ -32,7 +32,7 @@ export function ResultPanel({ result, loading }) {
         <div className="rounded-[14px] border border-[var(--app-border)] bg-[var(--app-card)] p-5 shadow-lg shadow-black/15 sm:p-6">
         <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-emerald-200">Step 2</p>
         <h2 className="mt-1 text-2xl font-black text-[var(--app-text)]">Plant-care result</h2>
-        <div className="mt-6 flex min-h-[420px] items-center justify-center rounded-[14px] border-2 border-dashed border-[var(--app-border-strong)] bg-[#2d353b] px-6 text-center text-[var(--app-text-muted)]">
+        <div className="mt-6 flex min-h-[420px] items-center justify-center rounded-[14px] border-2 border-dashed border-[var(--app-border-strong)] bg-[var(--app-bark)] px-6 text-center text-[var(--app-text-muted)]">
           Upload a plant photo to see a polished care card with name, confidence, traits, and practical notes.
         </div>
         </div>
@@ -66,6 +66,14 @@ export function ResultPanel({ result, loading }) {
           </div>
         </div>
 
+        <button
+          type="button"
+          onClick={onAddToGarden}
+          className="mt-5 rounded-[8px] bg-[var(--app-plum)] px-4 py-2 text-sm font-black text-white shadow-sm transition hover:bg-[var(--app-plum-dark)]"
+        >
+          Add to Garden
+        </button>
+
         {lowConfidence && (
           <div className="mt-5 rounded-[12px] border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
             Low-confidence identification. Compare the alternatives below and confirm with another source before acting on the result.
@@ -90,7 +98,7 @@ export function ResultPanel({ result, loading }) {
           <h3 className="text-lg font-black text-[var(--app-text)]">Likely alternatives</h3>
           <div className="mt-3 grid gap-3">
             {result.likelyAlternatives.map((plant) => (
-              <div key={`${plant.commonName}-${plant.scientificName}`} className="rounded-[12px] border border-[var(--app-border)] bg-[#2d353b] p-4">
+              <div key={`${plant.commonName}-${plant.scientificName}`} className="rounded-[12px] border border-[var(--app-border)] bg-[var(--app-bark)] p-4">
                 <p className="font-extrabold text-[var(--app-text)]">{plant.commonName}</p>
                 <p className="text-sm italic text-[var(--app-text-muted)]">{plant.scientificName}</p>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--app-text-muted)]">{plant.reason}</p>

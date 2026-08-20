@@ -2,9 +2,7 @@
 
 ## Current State
 
-Plant ID is a working Vite, React, Tailwind, and Vercel serverless plant-identification app. The current implementation supports one uploaded image at a time, local preview, server-side rate limiting, OpenAI vision identification, structured response validation, low-confidence warnings, and a rendered care card.
-
-The approved product direction is now a private personal garden field guide with optional saved individual plants, but that direction has not been implemented.
+Plant ID is a working Vite, React, Tailwind, and Vercel serverless plant-identification app. The current implementation supports one uploaded image at a time, local preview, server-side rate limiting, OpenAI vision identification, structured response validation, low-confidence warnings, a rendered care card, and a private My Garden foundation.
 
 ## What Works
 
@@ -16,6 +14,9 @@ The approved product direction is now a private personal garden field guide with
 - Strict JSON extraction and normalization through a testable server-side core module outside the Vercel API route directory.
 - Care card rendering with confidence, alternatives, trait badges, warnings, expandable sections, and fun fact.
 - Supabase-backed rate limiting before OpenAI calls using isolated Plant ID database objects.
+- Owner-key unlock with a secure 30-day per-device Garden session.
+- Private My Garden list, Grow form, individual plant page, editable Plant Type, and separate AI ID.
+- Private server-authorized saved photo retrieval from isolated Plant ID Supabase/Postgres objects.
 - Debug status panel hidden unless `?debug=1`.
 
 ## Verified Commands
@@ -43,6 +44,8 @@ Required server-side environment variables:
 OPENAI_API_KEY
 OPENAI_MODEL
 SUPABASE_DB_URL
+PLANT_ID_OWNER_KEY
+PLANT_ID_SESSION_SECRET
 PLANT_ID_IP_LIMIT
 PLANT_ID_IP_WINDOW
 PLANT_ID_DAILY_GLOBAL_LIMIT
@@ -65,11 +68,11 @@ PLANT_ID_FORCE_RATE_LIMIT
 
 ## Known Limitations
 
-- No saved plants, My Garden, persistence, authentication, multi-photo identification, print/PDF output, search, filtering, or Miscellany integration exists yet.
+- No multi-photo identification, AI reassessment history, full personalized care guide, diagnosis workflow, print/PDF output, search, filtering, or Miscellany integration exists yet.
 - No project-specific browser tests exist yet.
 - The current API schema is care-card oriented rather than saved-plant oriented.
 - Local end-to-end identification depends on `npx vercel dev` and valid local secrets.
 
 ## Last Implementation Summary
 
-The production hotfix replaced Redis/Upstash rate limiting with an isolated Supabase/Postgres limiter in the shared GavinApps Supabase project. Plant ID owns only the `plant_id` schema objects from `supabase/migrations/202608200001_plant_id_rate_limits.sql`; MemoryEngine and Miscellany objects remain untouched.
+Part 2 added the private My Garden foundation: owner unlock, signed 30-day sessions, isolated Garden plant/photo tables, authorized Garden APIs, Grow creation from manual entry or an identification, individual plant edit pages, and a warmer first-pass garden visual refresh.

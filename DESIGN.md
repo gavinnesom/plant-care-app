@@ -2,11 +2,11 @@
 
 ## Architecture Overview
 
-The current app is a small Vite React frontend plus one Vercel-compatible serverless function.
+The current app is a Vite React frontend plus Vercel-compatible serverless functions.
 
 - The frontend owns file selection, local preview, loading/error state, and result rendering.
-- The API route owns request orchestration, image validation, rate limiting, OpenAI calls, and response handling. `server/plant-identification-core.js` owns multipart image extraction, model JSON extraction, and result normalization. `server/rate-limit.js` owns the server-only Supabase rate-limit boundary.
-- There is no current saved-plant database, authentication, persistent plant storage, or saved plant model. The only current database use is bounded server-side rate-limit counters.
+- The identification API route owns request orchestration, image validation, rate limiting, OpenAI calls, and response handling. `server/plant-identification-core.js` owns multipart image extraction, model JSON extraction, and result normalization. `server/rate-limit.js` owns the server-only Supabase rate-limit boundary.
+- Garden APIs own private owner-session checks, Garden reads/writes, and private photo serving. `server/garden-session.js` owns signed session cookies; `server/garden-store.js` owns Garden persistence and photo storage.
 
 ## Current Data Flow
 
@@ -16,6 +16,7 @@ The current app is a small Vite React frontend plus one Vercel-compatible server
 4. `api/identify-plant.js` rate-limits the request before expensive work.
 5. The API uses `server/plant-identification-core.js` to extract the multipart image and normalize the model JSON, validates the image, calls OpenAI Responses with image input, and returns `{ result, warning }`.
 6. `ResultPanel` renders confidence, alternatives, care traits, warnings, and care sections.
+7. If Gavin chooses Add to Garden, the app unlocks My Garden if necessary and opens the Grow form with the current image, AI ID, and initial Plant Type.
 
 ## Module Responsibilities
 
@@ -26,6 +27,12 @@ The current app is a small Vite React frontend plus one Vercel-compatible server
 - `src/lib/plantSchema.js`: shared frontend constants and trait copy.
 - `api/identify-plant.js`: server boundary for request orchestration, image validation, rate limiting, OpenAI interaction, and response handling.
 - `server/plant-identification-core.js`: testable server-side parsing and normalization for multipart image input and OpenAI JSON output.
+- `api/garden-session.js`: owner-key unlock and session status.
+- `api/garden-plants.js`: authorized Garden list/create.
+- `api/garden-plants/[id].js`: authorized plant read/edit.
+- `api/garden-photos/[id].js`: authorized private photo bytes.
+- `server/garden-session.js`: signed 30-day session cookie creation/verification.
+- `server/garden-store.js`: saved plant/photo persistence.
 
 ## Important Invariants
 
@@ -36,10 +43,12 @@ The current app is a small Vite React frontend plus one Vercel-compatible server
 - AI identification must communicate uncertainty and safety caveats.
 - Future recorded identity and AI assessment must not silently overwrite each other.
 - Future private My Garden access must be authorized server-side for every garden read, write, and photograph request.
+- AI ID and Plant Type are separate persisted fields; editing Plant Type must not alter AI ID.
+- Saved photos are private and must be served only through authorized API routes.
 
 ## Future Data Model Direction
 
-The future saved plant record should distinguish:
+The saved plant record distinguishes:
 
 - garden name: required personal label;
 - location: optional place where the individual plant lives;
@@ -50,13 +59,11 @@ The future saved plant record should distinguish:
 - care and diagnosis guide: personalized to the individual plant and environment;
 - timestamps and recoverable deletion state.
 
-Supabase is the expected infrastructure, using separate Plant ID tables and private photograph storage in the existing GavinApps project. MemoryEngine must remain untouched.
+Supabase is the infrastructure, using separate Plant ID schema objects in the existing GavinApps project. MemoryEngine must remain untouched.
 
 ## Visual Direction
 
-The current visual design is a dark slate/green shell with cream result cards, botanical care badges, and a compact two-column desktop flow that collapses for smaller screens. Do not change the visual direction during standards or testing work.
-
-Future My Garden screens should favor a browsable card list or grid over search until Gavin's collection is large enough to justify search and filtering.
+The current visual design is a warmer garden shell with off-whites, bark, moss, leaf, and plum accents. My Garden uses a simple tiled gallery rather than search or filtering.
 
 ## Error and Empty States
 
