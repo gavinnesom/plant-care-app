@@ -13,10 +13,10 @@
 
 ```mermaid
 flowchart TD
-  A[UploadPanel selects one image] --> B[App validates file]
+  A[UploadPanel builds a photo set] --> B[App validates files]
   B --> C[FormData POST to /api/identify-plant]
   C --> D[API checks rate limits]
-  D --> E[API parses multipart image]
+  D --> E[API parses multipart images]
   E --> F[OpenAI Responses vision call]
   F --> G[Extract and validate plant JSON]
   G --> H[ResultPanel renders care card]
@@ -45,9 +45,10 @@ flowchart TD
 | `api/identify-plant.js` | Serverless API orchestration, rate limiting, OpenAI call, response |
 | `api/garden-session.js` | Owner unlock and Garden session status |
 | `api/garden-plants.js` | Authorized Garden list/create |
-| `api/garden-plants/[id].js` | Authorized individual plant read/edit/soft delete |
-| `api/garden-photos/[id].js` | Authorized private photo bytes |
-| `server/plant-identification-core.js` | Multipart image extraction, model JSON extraction, normalized result validation |
+| `api/garden-plants/[id].js` | Authorized individual plant read/edit/add photos/soft delete |
+| `api/garden-photos/[id].js` | Authorized private photo bytes and soft photo removal |
+| `api/garden-identify-plant.js` | Authorized saved-plant AI identification/re-identification from private photo bytes |
+| `server/plant-identification-core.js` | Multipart image-set extraction, OpenAI vision call, model JSON extraction, normalized result validation |
 | `server/db.js` | Shared Postgres pool |
 | `server/garden-session.js` | Server-only owner key and signed 30-day session cookie boundary |
 | `server/garden-store.js` | Garden plant and private photo persistence |
@@ -61,11 +62,11 @@ flowchart TD
 
 | If you want to... | Start in... | Then inspect... | Verify with... |
 |---|---|---|---|
-| Change current upload validation | `src/components/UploadPanel.jsx` | `src/lib/plantSchema.js`, `api/identify-plant.js` | `npm test`, `npm run build` |
+| Change current upload validation | `src/components/UploadPanel.jsx` | `src/lib/plantSchema.js`, `api/identify-plant.js`, `server/plant-identification-core.js` | `npm test`, `npm run build` |
 | Change result fields or care sections | `server/plant-identification-core.js` | `api/identify-plant.js`, `src/components/ResultPanel.jsx`, `src/lib/plantSchema.js` | `npm test`, `npm run build` |
 | Change OpenAI prompt or model behavior | `api/identify-plant.js` | `README.md`, `DESIGN.md` | `npm test`, manual `npx vercel dev` check with credentials |
 | Change rate limiting | `server/rate-limit.js` | `api/identify-plant.js`, `supabase/migrations/` | `npm test`, `npm run build`, Vercel preview POST |
-| Change My Garden persistence or saved-photo behavior | `server/garden-store.js` | `api/garden-plants.js`, `api/garden-plants/[id].js`, `api/garden-photos/[id].js`, Supabase migrations | `npm test`, `npm run build`, preview Garden smoke |
+| Change My Garden persistence or saved-photo behavior | `server/garden-store.js` | `api/garden-plants.js`, `api/garden-plants/[id].js`, `api/garden-photos/[id].js`, `api/garden-identify-plant.js`, Supabase migrations | `npm test`, `npm run build`, preview Garden smoke |
 | Add project-specific browser tests | new `playwright.config.*` | `tests/e2e/`, README commands | project Playwright command |
 | Update deployment setup | `README.md` | `PROJECT_STATUS.md`, `.env.example` | `npm run build` and Vercel preview checks |
 

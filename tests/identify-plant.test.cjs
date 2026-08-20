@@ -2,7 +2,16 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
-const { extractJson, parseMultipartImage, validatePlantResult } = require('../server/plant-identification-core');
+const {
+  MAX_IDENTIFICATION_IMAGES,
+  MAX_IMAGE_BYTES,
+  extractJson,
+  parseMultipartImage,
+  parseMultipartImages,
+  plantPrompt,
+  validateIdentificationImages,
+  validatePlantResult,
+} = require('../server/plant-identification-core');
 const { checkSupabaseRateLimit, hashClientIdentifier, parseWindowSeconds } = require('../server/rate-limit');
 
 function validRawResult(overrides = {}) {
@@ -66,6 +75,44 @@ test('parseMultipartImage extracts the uploaded image part', () => {
   assert.equal(image.filename, 'plant.webp');
   assert.equal(image.mimeType, 'image/webp');
   assert.equal(image.buffer.toString(), 'image-bytes');
+});
+
+test('parseMultipartImages extracts every uploaded image part', () => {
+  const boundary = 'plant-id-boundary';
+  const body = Buffer.from(
+    [
+      `--${boundary}`,
+      'Content-Disposition: form-data; name="images"; filename="leaf.jpg"',
+      'Content-Type: image/jpeg',
+      '',
+      'leaf-bytes',
+      `--${boundary}`,
+      'Content-Disposition: form-data; name="images"; filename="flower.png"',
+      'Content-Type: image/png',
+      '',
+      'flower-bytes',
+      `--${boundary}--`,
+      '',
+    ].join('\r\n')
+  );
+
+  const images = parseMultipartImages(`multipart/form-data; boundary=${boundary}`, body);
+
+  assert.equal(images.length, 2);
+  assert.equal(images[0].filename, 'leaf.jpg');
+  assert.equal(images[1].buffer.toString(), 'flower-bytes');
+});
+
+test('validateIdentificationImages rejects excessive image counts and oversized members', () => {
+  const image = { buffer: Buffer.from('image-bytes'), mimeType: 'image/png' };
+  assert.throws(() => validateIdentificationImages(Array.from({ length: MAX_IDENTIFICATION_IMAGES + 1 }, () => image)), /no more than 5 photos/);
+  assert.throws(() => validateIdentificationImages([{ buffer: Buffer.alloc(MAX_IMAGE_BYTES + 1), mimeType: 'image/png' }]), /smaller than 8 MB/);
+  assert.throws(() => validateIdentificationImages([{ buffer: Buffer.from('x'), mimeType: 'image/gif' }]), /JPG, PNG, or WebP/);
+});
+
+test('plant prompt tells the model to use the full image set', () => {
+  assert.match(plantPrompt(3), /receiving 3 plant photos/);
+  assert.match(plantPrompt(3), /Use all provided images together/);
 });
 
 test('validatePlantResult trims strings, caps alternatives, and normalizes unknown enums', () => {

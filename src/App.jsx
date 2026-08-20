@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ResultPanel } from './components/ResultPanel';
 import { UploadPanel, validatePlantImage } from './components/UploadPanel';
-import { LOW_CONFIDENCE_THRESHOLD } from './lib/plantSchema';
+import { MAX_IDENTIFICATION_IMAGES, LOW_CONFIDENCE_THRESHOLD } from './lib/plantSchema';
 
 const initialDebugStatus = { requestStatus: 'idle', httpStatus: '', errorMessage: '' };
 
@@ -14,7 +14,7 @@ const emptyDraft = {
   aiScientificName: '',
   aiConfidence: null,
   aiRaw: null,
-  photoDataUrl: '',
+  photos: [],
 };
 
 function apiErrorMessage(payload, fallback) {
@@ -49,6 +49,25 @@ function fileToDataUrl(file) {
   });
 }
 
+async function dataUrlToBlob(dataUrl) {
+  const response = await fetch(dataUrl);
+  return response.blob();
+}
+
+function makePhotoPreview(file) {
+  return { id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`, file, url: URL.createObjectURL(file) };
+}
+
+function resultToAiDraft(result) {
+  return {
+    aiAssessmentState: result ? 'ai_guess' : 'none',
+    aiCommonName: result?.commonName || '',
+    aiScientificName: result?.scientificName || '',
+    aiConfidence: result?.confidence ?? null,
+    aiRaw: result || null,
+  };
+}
+
 function aiLabel(plant) {
   if (!plant || plant.aiAssessmentState === 'none') return 'No guess';
   return plant.aiScientificName || plant.aiCommonName || 'AI guess';
@@ -60,8 +79,8 @@ function displayPlantName(plant) {
 
 function App() {
   const [view, setView] = useState('identify');
-  const [imageUrl, setImageUrl] = useState('');
-  const [imageFile, setImageFile] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const photosRef = useRef([]);
   const [loading, setLoading] = useState(false);
   const [plantResult, setPlantResult] = useState(null);
   const [error, setError] = useState('');
@@ -78,6 +97,8 @@ function App() {
   const [selectedPlant, setSelectedPlant] = useState(null);
   const [savingPlant, setSavingPlant] = useState(false);
   const [deletingPlant, setDeletingPlant] = useState(false);
+  const [identifyingDraft, setIdentifyingDraft] = useState(false);
+  const [identifyingGardenPlant, setIdentifyingGardenPlant] = useState(false);
 
   useEffect(() => {
     fetch('/api/garden-session')
@@ -87,10 +108,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    return () => {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
-    };
-  }, [imageUrl]);
+    photosRef.current = photos;
+  }, [photos]);
+
+  useEffect(() => () => {
+    photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.url));
+  }, []);
 
   const pendingIdentificationDraft = useMemo(() => {
     if (!plantResult) return null;
@@ -98,31 +121,48 @@ function App() {
       ...emptyDraft,
       plantName: plantResult.commonName || '',
       plantType: plantResult.scientificName || plantResult.commonName || '',
-      aiAssessmentState: 'ai_guess',
-      aiCommonName: plantResult.commonName || '',
-      aiScientificName: plantResult.scientificName || '',
-      aiConfidence: plantResult.confidence ?? null,
-      aiRaw: plantResult,
+      ...resultToAiDraft(plantResult),
     };
   }, [plantResult]);
 
-  const handleFileSelected = (file) => {
-    const validationError = validatePlantImage(file);
+  const validatePhotoSet = (nextPhotos, context = 'identify') => {
+    if (nextPhotos.length > MAX_IDENTIFICATION_IMAGES) return `Choose no more than ${MAX_IDENTIFICATION_IMAGES} photos.`;
+    for (const photo of nextPhotos) {
+      const validationError = validatePlantImage(photo.file || photo);
+      if (validationError) return validationError;
+    }
+    if (context === 'identify' && !nextPhotos.length) return 'Choose at least one plant photo first.';
+    return '';
+  };
+
+  const handleFilesSelected = (files) => {
+    const nextFiles = Array.from(files || []);
+    const nextPhotos = [...photos, ...nextFiles.map(makePhotoPreview)];
+    const validationError = validatePhotoSet(nextPhotos);
     if (validationError) {
+      nextPhotos.slice(photos.length).forEach((photo) => URL.revokeObjectURL(photo.url));
       setError(validationError);
       return;
     }
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    setImageFile(file);
-    setImageUrl(URL.createObjectURL(file));
+    setPhotos(nextPhotos);
     setPlantResult(null);
     setWarning('');
     setError('');
-    setDebugStatus({ requestStatus: 'image selected', httpStatus: '', errorMessage: '' });
+    setDebugStatus({ requestStatus: 'photos selected', httpStatus: '', errorMessage: '' });
+  };
+
+  const removePhoto = (id) => {
+    setPhotos((current) => {
+      const removed = current.find((photo) => photo.id === id);
+      if (removed) URL.revokeObjectURL(removed.url);
+      return current.filter((photo) => photo.id !== id);
+    });
+    setPlantResult(null);
+    setWarning('');
   };
 
   const handleIdentifyPlant = async () => {
-    const validationError = validatePlantImage(imageFile);
+    const validationError = validatePhotoSet(photos);
     if (validationError) {
       setError(validationError);
       setDebugStatus({ requestStatus: 'validation error', httpStatus: '', errorMessage: validationError });
@@ -136,7 +176,7 @@ function App() {
     setDebugStatus({ requestStatus: 'starting request', httpStatus: '', errorMessage: '' });
 
     const formData = new FormData();
-    formData.append('image', imageFile);
+    photos.forEach((photo) => formData.append('images', photo.file));
 
     try {
       const response = await fetch('/api/identify-plant', { method: 'POST', body: formData });
@@ -163,9 +203,8 @@ function App() {
   };
 
   const handleClear = () => {
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    setImageUrl('');
-    setImageFile(null);
+    photos.forEach((photo) => URL.revokeObjectURL(photo.url));
+    setPhotos([]);
     setPlantResult(null);
     setError('');
     setWarning('');
@@ -204,41 +243,64 @@ function App() {
 
   const startGrow = async (source = 'manual') => {
     const nextDraft = source === 'identification' && pendingIdentificationDraft ? pendingIdentificationDraft : emptyDraft;
-    const photoDataUrl = source === 'identification' && imageFile ? await fileToDataUrl(imageFile) : '';
-    setDraft({ ...nextDraft, photoDataUrl });
+    const draftPhotos =
+      source === 'identification'
+        ? await Promise.all(photos.map(async (photo) => ({ id: crypto.randomUUID(), dataUrl: await fileToDataUrl(photo.file), name: photo.file.name })))
+        : [];
+    setDraft({ ...nextDraft, photos: draftPhotos });
     setSelectedPlant(null);
     setGardenError('');
     setView('grow');
   };
 
-  const handleDraftPhotoSelected = async (file) => {
-    const validationError = validatePlantImage(file);
+  const handleDraftPhotosSelected = async (files) => {
+    const nextFiles = Array.from(files || []);
+    if ((draft.photos?.length || 0) + nextFiles.length > MAX_IDENTIFICATION_IMAGES) {
+      setGardenError(`Choose no more than ${MAX_IDENTIFICATION_IMAGES} photos.`);
+      return;
+    }
+    const validationError = validatePhotoSet(nextFiles, 'draft');
     if (validationError) {
       setGardenError(validationError);
       return;
     }
     try {
-      const photoDataUrl = await fileToDataUrl(file);
-      setDraft((current) => ({ ...current, photoDataUrl }));
+      const nextPhotos = await Promise.all(nextFiles.map(async (file) => ({ id: crypto.randomUUID(), dataUrl: await fileToDataUrl(file), name: file.name })));
+      setDraft((current) => ({ ...current, photos: [...(current.photos || []), ...nextPhotos] }));
       setGardenError('');
     } catch (err) {
-      setGardenError(err.message || 'Unable to read the selected photo.');
+      setGardenError(err.message || 'Unable to read the selected photos.');
     }
   };
 
-  const handleSelectedPlantPhotoSelected = async (file) => {
-    const validationError = validatePlantImage(file);
+  const removeDraftPhoto = (id) => {
+    setDraft((current) => ({ ...current, photos: (current.photos || []).filter((photo) => photo.id !== id) }));
+  };
+
+  const handleSelectedPlantPhotosSelected = async (files) => {
+    const nextFiles = Array.from(files || []);
+    const existingCount = selectedPlant?.photos?.length || 0;
+    const pendingCount = selectedPlant?.pendingPhotos?.length || 0;
+    if (existingCount + pendingCount + nextFiles.length > MAX_IDENTIFICATION_IMAGES) {
+      setGardenError(`A plant can have up to ${MAX_IDENTIFICATION_IMAGES} photos.`);
+      return;
+    }
+    const validationError = validatePhotoSet(nextFiles, 'draft');
     if (validationError) {
       setGardenError(validationError);
       return;
     }
     try {
-      const photoDataUrl = await fileToDataUrl(file);
-      setSelectedPlant((current) => (current ? { ...current, photoDataUrl } : current));
+      const nextPhotos = await Promise.all(nextFiles.map(async (file) => ({ id: crypto.randomUUID(), dataUrl: await fileToDataUrl(file), name: file.name })));
+      setSelectedPlant((current) => (current ? { ...current, pendingPhotos: [...(current.pendingPhotos || []), ...nextPhotos] } : current));
       setGardenError('');
     } catch (err) {
-      setGardenError(err.message || 'Unable to read the selected photo.');
+      setGardenError(err.message || 'Unable to read the selected photos.');
     }
+  };
+
+  const removePendingPlantPhoto = (id) => {
+    setSelectedPlant((current) => (current ? { ...current, pendingPhotos: (current.pendingPhotos || []).filter((photo) => photo.id !== id) } : current));
   };
 
   const openGrow = async (source = 'manual') => {
@@ -282,17 +344,45 @@ function App() {
             confidence: draft.aiConfidence,
             raw: draft.aiRaw,
           },
-          photo: draft.photoDataUrl ? { dataUrl: draft.photoDataUrl, altText: draft.plantName } : null,
+          photos: (draft.photos || []).map((photo) => ({ dataUrl: photo.dataUrl, altText: draft.plantName || photo.name || 'Plant photo' })),
         }),
       });
       const payload = await readJsonResponse(response, 'Unable to save this plant.');
       await loadGarden();
-      setSelectedPlant(payload.plant);
+      setSelectedPlant({ ...payload.plant, pendingPhotos: [], selectedAiPhotoIds: (payload.plant.photos || []).map((photo) => photo.id) });
       setView('plant');
     } catch (err) {
       setGardenError(err.message || 'Unable to save this plant.');
     } finally {
       setSavingPlant(false);
+    }
+  };
+
+  const identifyDraft = async () => {
+    if (!draft.photos?.length) {
+      setGardenError('Add at least one photo before using AI.');
+      return;
+    }
+    setIdentifyingDraft(true);
+    setGardenError('');
+    try {
+      const formData = new FormData();
+      for (const photo of draft.photos) {
+        formData.append('images', await dataUrlToBlob(photo.dataUrl), photo.name || 'plant-photo.png');
+      }
+      const response = await fetch('/api/identify-plant', { method: 'POST', body: formData });
+      const payload = await readJsonResponse(response, 'Unable to identify this plant.');
+      if (!payload.result) throw new Error('API response did not include a plant result.');
+      setDraft((current) => ({
+        ...current,
+        ...resultToAiDraft(payload.result),
+        plantType: current.plantType || payload.result.scientificName || payload.result.commonName || '',
+      }));
+      if (payload.warning) setGardenError(payload.warning);
+    } catch (err) {
+      setGardenError(err.message || 'Unable to identify this plant.');
+    } finally {
+      setIdentifyingDraft(false);
     }
   };
 
@@ -308,14 +398,56 @@ function App() {
           plantName: selectedPlant.plantName,
           location: selectedPlant.location,
           plantType: selectedPlant.plantType,
-          photo: selectedPlant.photoDataUrl ? { dataUrl: selectedPlant.photoDataUrl, altText: selectedPlant.plantName } : null,
+          photos: (selectedPlant.pendingPhotos || []).map((photo) => ({ dataUrl: photo.dataUrl, altText: selectedPlant.plantName || photo.name || 'Plant photo' })),
         }),
       });
       const payload = await readJsonResponse(response, 'Unable to update this plant.');
-      setSelectedPlant(payload.plant);
+      setSelectedPlant({ ...payload.plant, pendingPhotos: [] });
       await loadGarden();
     } catch (err) {
       setGardenError(err.message || 'Unable to update this plant.');
+    } finally {
+      setSavingPlant(false);
+    }
+  };
+
+  const identifySelectedPlant = async () => {
+    if (!selectedPlant) return;
+    const photoIds = selectedPlant.selectedAiPhotoIds || [];
+    if (!photoIds.length) {
+      setGardenError('Choose at least one saved photo to identify.');
+      return;
+    }
+    setIdentifyingGardenPlant(true);
+    setGardenError('');
+    try {
+      const response = await fetch('/api/garden-identify-plant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plantId: selectedPlant.id, photoIds }),
+      });
+      const payload = await readJsonResponse(response, 'Unable to identify this plant.');
+      setSelectedPlant({ ...payload.plant, pendingPhotos: [], selectedAiPhotoIds: (payload.plant.photos || []).map((photo) => photo.id) });
+      await loadGarden();
+      if (payload.warning) setGardenError(payload.warning);
+    } catch (err) {
+      setGardenError(err.message || 'Unable to identify this plant.');
+    } finally {
+      setIdentifyingGardenPlant(false);
+    }
+  };
+
+  const deleteSelectedPlantPhoto = async (photoId) => {
+    if (!selectedPlant) return;
+    setSavingPlant(true);
+    setGardenError('');
+    try {
+      const response = await fetch(`/api/garden-photos/${photoId}`, { method: 'DELETE' });
+      const payload = await readJsonResponse(response, 'Unable to remove this photo.');
+      setSelectedPlant({ ...payload.plant, pendingPhotos: [], selectedAiPhotoIds: (payload.plant.photos || []).map((photo) => photo.id) });
+      await loadGarden();
+    } catch (err) {
+      setGardenError(err.message || 'Unable to remove this photo.');
     } finally {
       setSavingPlant(false);
     }
@@ -347,7 +479,7 @@ function App() {
     try {
       const response = await fetch(`/api/garden-plants/${plant.id}`);
       const payload = await readJsonResponse(response, 'Unable to open this plant.');
-      setSelectedPlant(payload.plant);
+      setSelectedPlant({ ...payload.plant, pendingPhotos: [], selectedAiPhotoIds: (payload.plant.photos || []).map((photo) => photo.id) });
     } catch (err) {
       setGardenError(err.message || 'Unable to open this plant.');
     }
@@ -358,15 +490,15 @@ function App() {
       <div className="mx-auto max-w-7xl">
         {view === 'identify' && (
           <IdentifyView
-            imageUrl={imageUrl}
-            imageFile={imageFile}
+            photos={photos}
             loading={loading}
             plantResult={plantResult}
             error={error}
             warning={warning}
             showDebugPanel={showDebugPanel}
             debugStatus={debugStatus}
-            onFileSelected={handleFileSelected}
+            onFilesSelected={handleFilesSelected}
+            onRemovePhoto={removePhoto}
             onIdentify={handleIdentifyPlant}
             onClear={handleClear}
             onAddToGarden={() => openGrow('identification')}
@@ -374,8 +506,8 @@ function App() {
           />
         )}
         {view === 'garden' && <GardenView plants={gardenPlants} loading={gardenLoading} error={gardenError} onGrow={() => openGrow('manual')} onOpenPlant={openPlant} modeControl={<ModeButton mode="identify" onGarden={openGarden} onIdentify={() => setView('identify')} />} />}
-        {view === 'grow' && <GrowView draft={draft} error={gardenError} saving={savingPlant} onChange={setDraft} onPhotoSelected={handleDraftPhotoSelected} onSave={saveDraft} onCancel={() => setView('garden')} modeControl={<ModeButton mode="identify" onGarden={openGarden} onIdentify={() => setView('identify')} />} />}
-        {view === 'plant' && selectedPlant && <PlantView plant={selectedPlant} error={gardenError} saving={savingPlant} deleting={deletingPlant} onChange={setSelectedPlant} onPhotoSelected={handleSelectedPlantPhotoSelected} onSave={updateSelectedPlant} onDelete={deleteSelectedPlant} onBack={() => setView('garden')} modeControl={<ModeButton mode="identify" onGarden={openGarden} onIdentify={() => setView('identify')} />} />}
+        {view === 'grow' && <GrowView draft={draft} error={gardenError} saving={savingPlant} identifying={identifyingDraft} onChange={setDraft} onPhotosSelected={handleDraftPhotosSelected} onRemovePhoto={removeDraftPhoto} onIdentify={identifyDraft} onSave={saveDraft} onCancel={() => setView('garden')} modeControl={<ModeButton mode="identify" onGarden={openGarden} onIdentify={() => setView('identify')} />} />}
+        {view === 'plant' && selectedPlant && <PlantView plant={selectedPlant} error={gardenError} saving={savingPlant} deleting={deletingPlant} identifying={identifyingGardenPlant} onChange={setSelectedPlant} onPhotosSelected={handleSelectedPlantPhotosSelected} onRemovePendingPhoto={removePendingPlantPhoto} onDeletePhoto={deleteSelectedPlantPhoto} onIdentify={identifySelectedPlant} onSave={updateSelectedPlant} onDelete={deleteSelectedPlant} onBack={() => setView('garden')} modeControl={<ModeButton mode="identify" onGarden={openGarden} onIdentify={() => setView('identify')} />} />}
       </div>
       {unlockOpen && <UnlockDialog onUnlocked={handleUnlocked} onCancel={() => setUnlockOpen(false)} />}
     </div>
@@ -405,7 +537,7 @@ function IdentifyView(props) {
           <div>
             <TitleGroup title="Plants & Care" action={props.modeControl} size="large" />
             <p className="mt-4 max-w-2xl text-lg leading-relaxed text-[var(--app-text-muted)]">
-              Identify a plant from one photo, then keep it temporary or save it as an individual plant in My Garden.
+              Identify a plant from one or more photos, then keep it temporary or save it as an individual plant in My Garden.
             </p>
           </div>
           <HeaderGuidance />
@@ -413,9 +545,9 @@ function IdentifyView(props) {
       </header>
       {props.warning && <div className="mb-5 rounded-[12px] border border-[var(--app-gold)] bg-[var(--app-gold-soft)] p-4 text-sm font-semibold leading-relaxed text-[var(--app-ink)]">{props.warning}</div>}
       <main className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
-        <UploadPanel imageUrl={props.imageUrl} fileName={props.imageFile?.name} loading={props.loading} onFileSelected={props.onFileSelected} onIdentify={props.onIdentify} onClear={props.onClear} error={props.error} />
+        <UploadPanel photos={props.photos} loading={props.loading} onFilesSelected={props.onFilesSelected} onRemovePhoto={props.onRemovePhoto} onIdentify={props.onIdentify} onClear={props.onClear} error={props.error} />
         <div className="grid gap-4">
-          {props.showDebugPanel && <DebugPanel fileName={props.imageFile?.name} debugStatus={props.debugStatus} />}
+          {props.showDebugPanel && <DebugPanel fileName={props.photos?.map((photo) => photo.file.name).join(', ')} debugStatus={props.debugStatus} />}
           {props.plantResult?.sections?.funFact && <SpotlightCard result={props.plantResult} />}
           <ResultPanel result={props.plantResult} loading={props.loading} onAddToGarden={props.onAddToGarden} />
         </div>
@@ -457,42 +589,60 @@ function GardenView({ plants, loading, error, onGrow, onOpenPlant, modeControl }
   );
 }
 
-function GrowView({ draft, error, saving, onChange, onPhotoSelected, onSave, onCancel, modeControl }) {
+function GrowView({ draft, error, saving, identifying, onChange, onPhotosSelected, onRemovePhoto, onIdentify, onSave, onCancel, modeControl }) {
   return (
     <main className="rounded-[16px] border border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-xl shadow-black/10">
       <TitleGroup title="Save a garden plant" action={modeControl} />
       {error && <ErrorBanner>{error}</ErrorBanner>}
       <div className="mt-6 grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <div className="rounded-[14px] border border-[var(--app-border)] bg-[var(--app-panel-soft)] p-4 text-[var(--app-ink)]">
-          <PhotoPicker photoDataUrl={draft.photoDataUrl} onPhotoSelected={onPhotoSelected} />
+          <PhotoSetPicker photos={draft.photos || []} onPhotosSelected={onPhotosSelected} onRemovePhoto={onRemovePhoto} inputId="grow-photo-input" emptyLabel="Add Photos" />
           <IdentityReadout draft={draft} />
+          <button className="garden-button garden-button-primary mt-4 w-full" disabled={!draft.photos?.length || identifying || saving} onClick={onIdentify}>
+            {identifying ? 'Identifying...' : draft.aiAssessmentState === 'ai_guess' ? 'Re-identify with AI' : 'Identify with AI'}
+          </button>
         </div>
         <PlantForm value={draft} onChange={onChange} />
       </div>
       <div className="mt-6 flex flex-wrap gap-3">
-        <button className="garden-button garden-button-primary" disabled={saving} onClick={onSave}>{saving ? 'Saving...' : 'Save plant'}</button>
-        <button className="garden-button" onClick={onCancel} disabled={saving}>Cancel</button>
+        <button className="garden-button garden-button-primary" disabled={saving || identifying} onClick={onSave}>{saving ? 'Saving...' : 'Save plant'}</button>
+        <button className="garden-button" onClick={onCancel} disabled={saving || identifying}>Cancel</button>
       </div>
     </main>
   );
 }
 
-function PlantView({ plant, error, saving, deleting, onChange, onPhotoSelected, onSave, onDelete, onBack, modeControl }) {
+function PlantView({ plant, error, saving, deleting, identifying, onChange, onPhotosSelected, onRemovePendingPhoto, onDeletePhoto, onIdentify, onSave, onDelete, onBack, modeControl }) {
+  const savedPhotos = plant.photos || [];
+  const pendingPhotos = plant.pendingPhotos || [];
+  const selectedIds = plant.selectedAiPhotoIds || [];
+  const toggleAiPhoto = (photoId) => {
+    const nextIds = selectedIds.includes(photoId) ? selectedIds.filter((id) => id !== photoId) : [...selectedIds, photoId];
+    onChange({ ...plant, selectedAiPhotoIds: nextIds });
+  };
+
   return (
     <main className="rounded-[16px] border border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-xl shadow-black/10">
       <TitleGroup title={displayPlantName(plant)} action={modeControl} />
       <button className="mt-3 text-sm font-black text-[var(--app-leaf)]" onClick={onBack}>Back to My Garden</button>
       <div className="mt-5 grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
-          <PhotoPicker
-            inputId="plant-photo-input"
-            photoDataUrl={plant.photoDataUrl || plant.photoUrl}
-            emptyLabel="Add Photo"
-            onPhotoSelected={onPhotoSelected}
+          <SavedPhotoSet
+            photos={savedPhotos}
+            pendingPhotos={pendingPhotos}
+            selectedIds={selectedIds}
+            saving={saving || deleting || identifying}
+            onToggleAiPhoto={toggleAiPhoto}
+            onDeletePhoto={onDeletePhoto}
+            onPhotosSelected={onPhotosSelected}
+            onRemovePendingPhoto={onRemovePendingPhoto}
           />
           <div className="mt-4 rounded-[14px] border border-[var(--app-border)] bg-[var(--app-panel-soft)] p-4 text-[var(--app-ink)]">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--app-moss-dark)]">AI ID</p>
             <p className="mt-2 font-black">{aiLabel(plant)}</p>
+            <button className="garden-button garden-button-primary mt-4 w-full" disabled={!selectedIds.length || identifying || saving || deleting} onClick={onIdentify}>
+              {identifying ? 'Identifying...' : plant.aiAssessmentState === 'ai_guess' ? 'Re-identify with AI' : 'Identify with AI'}
+            </button>
           </div>
         </div>
         <div>
@@ -532,22 +682,81 @@ function IdentityReadout({ draft }) {
   );
 }
 
-function PhotoPicker({ photoDataUrl, onPhotoSelected, inputId = 'grow-photo-input', emptyLabel = 'Add Photo' }) {
+function PhotoSetPicker({ photos, onPhotosSelected, onRemovePhoto, inputId = 'grow-photo-input', emptyLabel = 'Add Photos' }) {
   const handleChange = (event) => {
-    const file = event.target.files?.[0];
-    if (file) onPhotoSelected(file);
+    onPhotosSelected(event.target.files);
     event.target.value = '';
   };
 
   return (
     <div>
-      <label htmlFor={inputId} className="photo-picker">
-        {photoDataUrl ? <img src={photoDataUrl} alt="" className="aspect-[4/3] w-full rounded-[12px] object-cover" /> : <span>{emptyLabel}</span>}
-      </label>
-      <input id={inputId} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handleChange} />
+      <div className="grid gap-3">
+        {photos.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {photos.map((photo) => (
+              <figure key={photo.id} className="overflow-hidden rounded-[12px] border border-[var(--app-border)] bg-[var(--app-card)]">
+                <img src={photo.dataUrl} alt="" className="aspect-[4/3] w-full object-cover" />
+                <figcaption className="flex items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-[var(--app-ink-muted)]">
+                  <span className="min-w-0 truncate">{photo.name || 'Plant photo'}</span>
+                  <button type="button" className="text-[var(--app-moss-dark)]" onClick={() => onRemovePhoto(photo.id)}>Remove</button>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        ) : (
+          <label htmlFor={inputId} className="photo-picker"><span>{emptyLabel}</span></label>
+        )}
+      </div>
+      <input id={inputId} type="file" multiple accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handleChange} />
       <button type="button" className="garden-button mt-3 w-full" onClick={() => document.getElementById(inputId)?.click()}>
-        {photoDataUrl ? 'Change photo' : 'Browse photo'}
+        {photos.length ? 'Add photos' : 'Browse photos'}
       </button>
+    </div>
+  );
+}
+
+function SavedPhotoSet({ photos, pendingPhotos, selectedIds, saving, onToggleAiPhoto, onDeletePhoto, onPhotosSelected, onRemovePendingPhoto }) {
+  return (
+    <div className="rounded-[14px] border border-[var(--app-border)] bg-[var(--app-panel-soft)] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--app-moss-dark)]">Photos</p>
+        <label className="garden-button cursor-pointer">
+          Add
+          <input type="file" multiple accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { onPhotosSelected(event.target.files); event.target.value = ''; }} />
+        </label>
+      </div>
+      {!photos.length && !pendingPhotos.length && (
+        <div className="mt-4 flex aspect-[4/3] items-center justify-center rounded-[12px] border border-dashed border-[var(--app-border-strong)] bg-[var(--app-card)] text-sm font-bold text-[var(--app-ink-muted)]">No photos</div>
+      )}
+      {photos.length > 0 && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {photos.map((photo) => (
+            <figure key={photo.id} className="overflow-hidden rounded-[12px] border border-[var(--app-border)] bg-[var(--app-card)]">
+              <img src={photo.url} alt="" className="aspect-[4/3] w-full object-cover" />
+              <figcaption className="grid gap-2 px-3 py-2 text-xs font-bold text-[var(--app-ink-muted)]">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={selectedIds.includes(photo.id)} onChange={() => onToggleAiPhoto(photo.id)} />
+                  Use for AI
+                </label>
+                <button type="button" className="text-left text-[var(--app-danger)]" disabled={saving} onClick={() => onDeletePhoto(photo.id)}>Remove photo</button>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+      {pendingPhotos.length > 0 && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {pendingPhotos.map((photo) => (
+            <figure key={photo.id} className="overflow-hidden rounded-[12px] border border-[var(--app-gold)] bg-[var(--app-gold-soft)]">
+              <img src={photo.dataUrl} alt="" className="aspect-[4/3] w-full object-cover" />
+              <figcaption className="flex items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-[var(--app-ink-muted)]">
+                <span className="min-w-0 truncate">{photo.name || 'New photo'}</span>
+                <button type="button" className="text-[var(--app-danger)]" onClick={() => onRemovePendingPhoto(photo.id)}>Remove</button>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

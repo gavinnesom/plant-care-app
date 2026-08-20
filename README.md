@@ -1,6 +1,6 @@
 # Plant ID Starter
 
-A polished Vite + React + Tailwind plant identification app. The current implementation identifies a single uploaded plant photo and returns AI-assisted plant-care guidance; the intended product direction is a personal garden field guide built around saved individual plants.
+A polished Vite + React + Tailwind plant identification app. The current implementation identifies plants from a selected photo set and returns AI-assisted plant-care guidance; the intended product direction is a personal garden field guide built around saved individual plants.
 
 ## Purpose
 
@@ -24,7 +24,7 @@ My Garden is a persistent collection of individual plants, not merely a list of 
 There are two valid ways to create a saved plant:
 
 1. After adding one or more photographs, select **Add to My Garden**. AI identification may happen before or after the plant is saved.
-2. Select **Grow** directly from My Garden, enter its required plant name, and add other information or one photograph later.
+2. Select **Grow** directly from My Garden, enter its required plant name, and add other information or photographs later.
 
 A saved plant requires only a plant name. Search and filtering are deferred until the collection becomes large enough to justify them; for Gavin's current collection of fewer than 25 plants, a simple browsable card list or grid is enough.
 
@@ -56,18 +56,18 @@ The printable version should be a deliberately condensed, dense, two-sided care 
 
 ## Current Implementation
 
-- Uploads JPG, PNG, or WebP plant images up to 8 MB.
-- Shows a local image preview before submission.
-- Sends the image to `api/identify-plant.js` as multipart form data.
-- Converts the uploaded image to base64 on the server.
-- Calls the OpenAI Responses API with vision input.
+- Uploads up to 5 JPG, PNG, or WebP plant images, each up to 8 MB, with a bounded aggregate photo-set limit.
+- Shows local image previews before submission.
+- Sends the selected image set to `api/identify-plant.js` as multipart form data.
+- Converts the uploaded images to base64 on the server.
+- Calls the OpenAI Responses API with all selected images in one vision request.
 - Asks for strict JSON matching the app's plant-care schema.
 - Validates and normalizes the response before returning it to the frontend.
 - Renders a portfolio-ready care card with confidence, alternatives, warnings, trait badges, and expandable care sections.
 
 The app includes a small inline SVG icon system for care traits such as sun exposure, water needs, soil type, pet safety, California suitability, and beginner friendliness.
 
-The current app still has a one-photo identification flow. Part 2 adds the private My Garden foundation: owner unlock, saved individual plants, the Grow form with one optional manual photo, private saved photos, and individual plant pages that can add, replace, or soft-delete one saved plant. Multi-photo identification, reassessment history, full care-guide personalization, diagnosis workflows, and print/PDF remain later work.
+Part 3 adds multiple-photo identification and saved-plant reassessment. The private My Garden foundation includes owner unlock, saved individual plants, the Grow form with zero to five optional photos, private saved photos, individual plant pages that can add/remove photos, explicit AI Identify/Re-identify actions, and individual-plant soft delete. AI reassessment history, full care-guide personalization, diagnosis workflows, and print/PDF remain later work.
 
 ## Tech Stack
 
@@ -129,9 +129,9 @@ npx vercel dev
 
 Do not use plain `npm run dev` when testing identification. It only starts the Vite frontend, so image preview will work but `/api/identify-plant` will not be served and no real identification can happen.
 
-The app is only working end-to-end when clicking `Identify plant` sends a multipart POST to `/api/identify-plant` and the result panel is populated from the API response.
+The app is only working end-to-end when clicking `Identify with AI` sends a multipart POST to `/api/identify-plant` with the selected photo set and the result panel is populated from the API response.
 
-For release verification, a real production `POST /api/identify-plant` with a plant image is required unless Gavin explicitly says otherwise.
+For release verification, a real production `POST /api/identify-plant` with plant images is required unless Gavin explicitly says otherwise. Part 3 and later releases should include at least one multi-photo production identification.
 
 ## Vercel Deployment Notes
 
@@ -191,7 +191,7 @@ Recommended Vercel setup:
 
 My Garden is private and uses a server-issued 30-day session cookie after the owner key is accepted. Repeated failed unlock attempts are throttled server-side. Garden records and photos are served only through authorized API routes. Photos are stored privately in Plant ID-owned Supabase/Postgres objects rather than exposed as public URLs.
 
-Saved plants are individual records. **AI ID** stores the AI's guess; **Plant Type** is Gavin's editable recorded identity for the saved plant. Editing Plant Type does not change AI ID.
+Saved plants are individual records. **AI ID** stores the AI's latest useful guess; **Plant Type** is Gavin's editable recorded identity for the saved plant. Editing Plant Type does not change AI ID, and AI reassessment does not overwrite an already-filled Plant Type.
 
 ## Important Files
 
@@ -204,8 +204,9 @@ Saved plants are individual records. **AI ID** stores the AI's guess; **Plant Ty
 - `api/identify-plant.js`: Vercel-compatible OpenAI vision endpoint
 - `api/garden-session.js`: owner unlock and session status endpoint
 - `api/garden-plants.js`: authorized Garden list/create endpoint
-- `api/garden-plants/[id].js`: authorized individual plant read/edit/soft-delete endpoint
-- `api/garden-photos/[id].js`: authorized private photo endpoint
+- `api/garden-plants/[id].js`: authorized individual plant read/edit/add-photo/soft-delete endpoint
+- `api/garden-photos/[id].js`: authorized private photo read/remove endpoint
+- `api/garden-identify-plant.js`: authorized saved-plant AI identification/re-identification endpoint
 - `server/rate-limit.js`: server-only Supabase-backed rate-limit boundary
 - `server/garden-session.js`: signed 30-day Garden session cookie helpers
 - `server/garden-store.js`: Plant ID Garden persistence and private photo storage
