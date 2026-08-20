@@ -49,8 +49,17 @@ function logServerError(error, status) {
     status,
     name: error.name,
     message: error.message,
+    boundary: error.boundary,
+    causeName: error.cause?.name,
+    causeCode: error.cause?.code,
+    causeMessage: error.cause?.message,
     stack: error.stack?.split('\n').slice(0, 3).join('\n'),
   });
+}
+
+function wrapBoundaryError(error, boundary) {
+  error.boundary = boundary;
+  return error;
 }
 
 function hasRateLimitConfig() {
@@ -161,10 +170,16 @@ async function checkRateLimit(req, res) {
   }
 
   const clientId = getClientIdentifier(req);
-  const [clientResult, globalResult] = await Promise.all([
-    limiters.ip.limit(clientId),
-    limiters.global.limit('all'),
-  ]);
+  let clientResult;
+  let globalResult;
+  try {
+    [clientResult, globalResult] = await Promise.all([
+      limiters.ip.limit(clientId),
+      limiters.global.limit('all'),
+    ]);
+  } catch (error) {
+    throw wrapBoundaryError(error, 'rate_limit');
+  }
 
   devLog('info', '[Plant ID API] Rate limit checked', {
     clientId,
@@ -243,29 +258,34 @@ async function callOpenAI({ imageBuffer, mimeType }) {
   const imageData = imageBuffer.toString('base64');
   const model = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      input: [
-        {
-          role: 'user',
-          content: [
-            { type: 'input_text', text: plantPrompt() },
-            {
-              type: 'input_image',
-              image_url: `data:${mimeType};base64,${imageData}`,
-              detail: 'high',
-            },
-          ],
-        },
-      ],
-    }),
-  });
+  let response;
+  try {
+    response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        input: [
+          {
+            role: 'user',
+            content: [
+              { type: 'input_text', text: plantPrompt() },
+              {
+                type: 'input_image',
+                image_url: `data:${mimeType};base64,${imageData}`,
+                detail: 'high',
+              },
+            ],
+          },
+        ],
+      }),
+    });
+  } catch (error) {
+    throw wrapBoundaryError(error, 'openai');
+  }
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
