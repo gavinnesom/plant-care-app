@@ -34,7 +34,7 @@ export function UploadPanel({ imageUrl, fileName, loading, onFileSelected, onIde
           <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-emerald-200">Step 1</p>
           <div className="mt-1 flex flex-wrap items-center gap-3">
             <h2 className="text-2xl font-black text-[var(--app-text)]">Upload a plant photo</h2>
-            <label className="inline-flex w-fit cursor-pointer rounded-[8px] bg-emerald-300 px-4 py-2 text-sm font-black text-slate-950 shadow-sm transition hover:bg-emerald-200">
+            <label className="inline-flex w-fit cursor-pointer rounded-[8px] bg-[var(--app-leaf)] px-4 py-2 text-sm font-black text-[#1f2618] shadow-sm transition hover:bg-[#c9e899]">
               Browse photo
               <input
                 type="file"
@@ -56,7 +56,7 @@ export function UploadPanel({ imageUrl, fileName, loading, onFileSelected, onIde
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         className={`mt-5 rounded-[14px] border-2 border-dashed p-4 transition ${
-          dragging ? 'border-emerald-300 bg-[#344047]' : 'border-[var(--app-border-strong)] bg-[#2d353b]'
+          dragging ? 'border-[var(--app-leaf)] bg-[var(--app-bark)]' : 'border-[var(--app-border-strong)] bg-[var(--app-bark)]'
         }`}
       >
         <p className="max-w-2xl text-sm leading-relaxed text-[var(--app-text-muted)]">
@@ -77,17 +77,17 @@ export function UploadPanel({ imageUrl, fileName, loading, onFileSelected, onIde
       </div>
 
       <div className="mt-5 flex flex-wrap gap-3">
-        <button
+          <button
           onClick={onIdentify}
           disabled={!imageUrl || loading}
-          className="rounded-[8px] bg-emerald-300 px-5 py-3 text-sm font-black text-slate-950 shadow-sm transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-[#687681] disabled:text-[#c9d2ce]"
+          className="rounded-[8px] bg-[var(--app-leaf)] px-5 py-3 text-sm font-black text-[#1f2618] shadow-sm transition hover:bg-[#c9e899] disabled:cursor-not-allowed disabled:bg-[#8b9075] disabled:text-[#e7dac1]"
         >
           {loading ? 'Identifying...' : 'Identify plant'}
         </button>
         <button
           onClick={onClear}
           disabled={loading && !imageUrl}
-          className="rounded-[8px] border border-[var(--app-border)] bg-[#2d353b] px-5 py-3 text-sm font-black text-[var(--app-text)] shadow-sm transition hover:bg-[#394249]"
+          className="rounded-[8px] border border-[var(--app-border)] bg-[var(--app-bark)] px-5 py-3 text-sm font-black text-[var(--app-text)] shadow-sm transition hover:bg-[#6b553e]"
         >
           Clear
         </button>

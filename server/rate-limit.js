@@ -1,7 +1,6 @@
 const crypto = require('node:crypto');
-const { Pool } = require('pg');
+const { getPool, hasDatabaseConfig } = require('./db');
 
-let pool = null;
 let warnedMissingRateLimitConfig = false;
 
 function parseWindowSeconds(value, fallbackSeconds) {
@@ -26,24 +25,8 @@ function hashClientIdentifier(clientIdentifier) {
   return crypto.createHash('sha256').update(clientIdentifier).digest('hex');
 }
 
-function getPool() {
-  if (pool) return pool;
-
-  const connectionString = process.env.SUPABASE_DB_URL;
-  if (!connectionString) return null;
-
-  pool = new Pool({
-    connectionString,
-    max: 1,
-    idleTimeoutMillis: 10_000,
-    connectionTimeoutMillis: 10_000,
-  });
-
-  return pool;
-}
-
 function hasRateLimitConfig() {
-  return Boolean(process.env.SUPABASE_DB_URL);
+  return hasDatabaseConfig();
 }
 
 function shouldFailClosed() {

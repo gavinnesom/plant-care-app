@@ -68,6 +68,7 @@ The printable version should be a deliberately condensed, dense, two-sided care 
 The app includes a small inline SVG icon system for care traits such as sun exposure, water needs, soil type, pet safety, California suitability, and beginner friendliness.
 
 The current app is still a one-photo identification flow. My Garden, multi-photo identification sets, saved plant records, personalized per-plant histories, and printable care sheets are planned product direction, not current implementation.
+Part 2 adds the private My Garden foundation: owner unlock, saved individual plants, the Grow form, private saved photos, and individual plant pages. Multi-photo identification, reassessment history, full care-guide personalization, diagnosis workflows, and print/PDF remain later work.
 
 ## Tech Stack
 
@@ -112,6 +113,8 @@ Add Supabase settings for server-side rate limiting:
 
 ```bash
 SUPABASE_DB_URL=your_server_only_supabase_database_url
+PLANT_ID_OWNER_KEY=your_private_owner_key
+PLANT_ID_SESSION_SECRET=your_long_random_cookie_signing_secret
 PLANT_ID_IP_LIMIT=15
 PLANT_ID_IP_WINDOW=1 h
 PLANT_ID_DAILY_GLOBAL_LIMIT=100
@@ -134,9 +137,10 @@ The app is only working end-to-end when clicking `Identify plant` sends a multip
 1. Connect the repo to Vercel.
 2. Add `OPENAI_API_KEY` in Vercel project settings.
 3. Add the server-only `SUPABASE_DB_URL` used by the shared GavinApps Supabase project.
-4. Apply the tracked Plant ID migration in `supabase/migrations/202608200001_plant_id_rate_limits.sql`.
-5. Optionally add `OPENAI_MODEL` and rate-limit override values.
-6. Deploy.
+4. Add `PLANT_ID_OWNER_KEY` and `PLANT_ID_SESSION_SECRET` as server-only secrets.
+5. Apply the tracked Plant ID migrations in `supabase/migrations/`.
+6. Optionally add `OPENAI_MODEL` and rate-limit override values.
+7. Deploy.
 
 If `OPENAI_API_KEY` is missing locally or in Vercel, the UI will show:
 
@@ -179,8 +183,14 @@ Production behavior:
 
 Recommended Vercel setup:
 
-- Add `OPENAI_API_KEY` and `SUPABASE_DB_URL` for both Preview and Production.
+- Add `OPENAI_API_KEY`, `SUPABASE_DB_URL`, `PLANT_ID_OWNER_KEY`, and `PLANT_ID_SESSION_SECRET` for both Preview and Production.
 - Keep all API keys and database credentials server-side only.
+
+## My Garden
+
+My Garden is private and uses a server-issued 30-day session cookie after the owner key is accepted. Garden records and photos are served only through authorized API routes. Photos are stored privately in Plant ID-owned Supabase/Postgres objects rather than exposed as public URLs.
+
+Saved plants are individual records. **AI ID** stores the AI's guess; **Plant Type** is Gavin's editable recorded identity for the saved plant. Editing Plant Type does not change AI ID.
 
 ## Important Files
 
@@ -191,8 +201,15 @@ Recommended Vercel setup:
 - `src/components/TraitBadge.jsx`: maps care enums to polished badges
 - `src/lib/plantSchema.js`: shared frontend schema constants and trait copy
 - `api/identify-plant.js`: Vercel-compatible OpenAI vision endpoint
+- `api/garden-session.js`: owner unlock and session status endpoint
+- `api/garden-plants.js`: authorized Garden list/create endpoint
+- `api/garden-plants/[id].js`: authorized individual plant read/edit endpoint
+- `api/garden-photos/[id].js`: authorized private photo endpoint
 - `server/rate-limit.js`: server-only Supabase-backed rate-limit boundary
+- `server/garden-session.js`: signed 30-day Garden session cookie helpers
+- `server/garden-store.js`: Plant ID Garden persistence and private photo storage
 - `supabase/migrations/202608200001_plant_id_rate_limits.sql`: isolated Plant ID rate-limit schema and function
+- `supabase/migrations/202608200002_plant_id_private_garden.sql`: isolated Garden plant/photo schema
 
 ## Safety Note
 
