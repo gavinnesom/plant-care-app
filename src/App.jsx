@@ -6,7 +6,7 @@ import { LOW_CONFIDENCE_THRESHOLD } from './lib/plantSchema';
 const initialDebugStatus = { requestStatus: 'idle', httpStatus: '', errorMessage: '' };
 
 const emptyDraft = {
-  gardenName: '',
+  plantName: '',
   location: '',
   plantType: '',
   aiAssessmentState: 'none',
@@ -54,6 +54,10 @@ function aiLabel(plant) {
   return plant.aiScientificName || plant.aiCommonName || 'AI guess';
 }
 
+function displayPlantName(plant) {
+  return plant?.plantName || plant?.gardenName || '';
+}
+
 function App() {
   const [view, setView] = useState('identify');
   const [imageUrl, setImageUrl] = useState('');
@@ -91,7 +95,7 @@ function App() {
     if (!plantResult) return null;
     return {
       ...emptyDraft,
-      gardenName: plantResult.commonName || '',
+      plantName: plantResult.commonName || '',
       plantType: plantResult.scientificName || plantResult.commonName || '',
       aiAssessmentState: 'ai_guess',
       aiCommonName: plantResult.commonName || '',
@@ -206,6 +210,36 @@ function App() {
     setView('grow');
   };
 
+  const handleDraftPhotoSelected = async (file) => {
+    const validationError = validatePlantImage(file);
+    if (validationError) {
+      setGardenError(validationError);
+      return;
+    }
+    try {
+      const photoDataUrl = await fileToDataUrl(file);
+      setDraft((current) => ({ ...current, photoDataUrl }));
+      setGardenError('');
+    } catch (err) {
+      setGardenError(err.message || 'Unable to read the selected photo.');
+    }
+  };
+
+  const handleSelectedPlantPhotoSelected = async (file) => {
+    const validationError = validatePlantImage(file);
+    if (validationError) {
+      setGardenError(validationError);
+      return;
+    }
+    try {
+      const photoDataUrl = await fileToDataUrl(file);
+      setSelectedPlant((current) => (current ? { ...current, photoDataUrl } : current));
+      setGardenError('');
+    } catch (err) {
+      setGardenError(err.message || 'Unable to read the selected photo.');
+    }
+  };
+
   const openGrow = async (source = 'manual') => {
     if (!gardenUnlocked) {
       setPendingAfterUnlock({ type: 'grow', source });
@@ -236,7 +270,7 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gardenName: draft.gardenName,
+          plantName: draft.plantName,
           location: draft.location,
           plantType: draft.plantType,
           identitySource: draft.aiAssessmentState === 'ai_guess' ? 'ai_initial' : 'manual',
@@ -247,7 +281,7 @@ function App() {
             confidence: draft.aiConfidence,
             raw: draft.aiRaw,
           },
-          photo: draft.photoDataUrl ? { dataUrl: draft.photoDataUrl, altText: draft.gardenName } : null,
+          photo: draft.photoDataUrl ? { dataUrl: draft.photoDataUrl, altText: draft.plantName } : null,
         }),
       });
       const payload = await readJsonResponse(response, 'Unable to save this plant.');
@@ -270,9 +304,10 @@ function App() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gardenName: selectedPlant.gardenName,
+          plantName: selectedPlant.plantName,
           location: selectedPlant.location,
           plantType: selectedPlant.plantType,
+          photo: selectedPlant.photoDataUrl ? { dataUrl: selectedPlant.photoDataUrl, altText: selectedPlant.plantName } : null,
         }),
       });
       const payload = await readJsonResponse(response, 'Unable to update this plant.');
@@ -298,9 +333,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--app-page)] px-4 py-5 text-[var(--app-text)] sm:py-7">
+    <div className="app-shell min-h-screen px-4 py-5 text-[var(--app-text)] sm:py-7">
       <div className="mx-auto max-w-7xl">
-        <ModeButton mode={view === 'identify' ? 'garden' : 'identify'} onGarden={openGarden} onIdentify={() => setView('identify')} />
         {view === 'identify' && (
           <IdentifyView
             imageUrl={imageUrl}
@@ -315,11 +349,12 @@ function App() {
             onIdentify={handleIdentifyPlant}
             onClear={handleClear}
             onAddToGarden={() => openGrow('identification')}
+            modeControl={<ModeButton mode="garden" onGarden={openGarden} onIdentify={() => setView('identify')} />}
           />
         )}
-        {view === 'garden' && <GardenView plants={gardenPlants} loading={gardenLoading} error={gardenError} onGrow={() => openGrow('manual')} onOpenPlant={openPlant} />}
-        {view === 'grow' && <GrowView draft={draft} error={gardenError} saving={savingPlant} onChange={setDraft} onSave={saveDraft} onCancel={() => setView('garden')} />}
-        {view === 'plant' && selectedPlant && <PlantView plant={selectedPlant} error={gardenError} saving={savingPlant} onChange={setSelectedPlant} onSave={updateSelectedPlant} onBack={() => setView('garden')} />}
+        {view === 'garden' && <GardenView plants={gardenPlants} loading={gardenLoading} error={gardenError} onGrow={() => openGrow('manual')} onOpenPlant={openPlant} modeControl={<ModeButton mode="identify" onGarden={openGarden} onIdentify={() => setView('identify')} />} />}
+        {view === 'grow' && <GrowView draft={draft} error={gardenError} saving={savingPlant} onChange={setDraft} onPhotoSelected={handleDraftPhotoSelected} onSave={saveDraft} onCancel={() => setView('garden')} modeControl={<ModeButton mode="identify" onGarden={openGarden} onIdentify={() => setView('identify')} />} />}
+        {view === 'plant' && selectedPlant && <PlantView plant={selectedPlant} error={gardenError} saving={savingPlant} onChange={setSelectedPlant} onPhotoSelected={handleSelectedPlantPhotoSelected} onSave={updateSelectedPlant} onBack={() => setView('garden')} modeControl={<ModeButton mode="identify" onGarden={openGarden} onIdentify={() => setView('identify')} />} />}
       </div>
       {unlockOpen && <UnlockDialog onUnlocked={handleUnlocked} onCancel={() => setUnlockOpen(false)} />}
     </div>
@@ -329,17 +364,15 @@ function App() {
 function ModeButton({ mode, onGarden, onIdentify }) {
   const isGarden = mode === 'garden';
   return (
-    <div className="mb-4 flex justify-end">
-      <button
-        type="button"
-        onClick={isGarden ? onGarden : onIdentify}
-        className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-card)] text-[var(--app-text)] shadow-lg shadow-black/10 transition hover:bg-[var(--app-bark)]"
-        aria-label={isGarden ? 'Open My Garden' : 'Identify a plant'}
-        title={isGarden ? 'My Garden' : 'Identify Plant'}
-      >
-        {isGarden ? <CordylineIcon /> : <CameraIcon />}
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={isGarden ? onGarden : onIdentify}
+      className="mode-button"
+      aria-label={isGarden ? 'Open My Garden' : 'Identify a plant'}
+      title={isGarden ? 'My Garden' : 'Identify Plant'}
+    >
+      {isGarden ? <CordylineIcon /> : <CameraIcon />}
+    </button>
   );
 }
 
@@ -347,7 +380,7 @@ function IdentifyView(props) {
   return (
     <>
       <header className="mb-6 rounded-[16px] border border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-xl shadow-black/10 sm:p-7">
-        <p className="text-sm font-black uppercase tracking-[0.2em] text-[var(--app-moss)]">AI-assisted plant care</p>
+        <HeaderKicker label="AI-assisted plant care" action={props.modeControl} />
         <div className="mt-4 grid gap-5 lg:grid-cols-[0.95fr_1.05fr] lg:items-end">
           <div>
             <h1 className="max-w-3xl text-5xl font-black tracking-tight text-[var(--app-text)]">Plants & Care</h1>
@@ -371,15 +404,14 @@ function IdentifyView(props) {
   );
 }
 
-function GardenView({ plants, loading, error, onGrow, onOpenPlant }) {
+function GardenView({ plants, loading, error, onGrow, onOpenPlant, modeControl }) {
   return (
     <main>
       <section className="rounded-[16px] border border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-xl shadow-black/10">
+        <HeaderKicker label="Private garden" action={modeControl} />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-[var(--app-moss)]">Private garden</p>
             <h1 className="mt-2 text-4xl font-black text-[var(--app-text)]">My Garden</h1>
-            <p className="mt-3 max-w-2xl text-[var(--app-text-muted)]">Saved plants are individual living records: names, places, photos, and identity notes that can grow over time.</p>
           </div>
           <button className="garden-button garden-button-primary" onClick={onGrow}>Grow</button>
         </div>
@@ -397,7 +429,7 @@ function GardenView({ plants, loading, error, onGrow, onOpenPlant }) {
           <button key={plant.id} className="garden-tile text-left" onClick={() => onOpenPlant(plant)}>
             <PhotoFrame plant={plant} />
             <div className="mt-4">
-              <h2 className="text-xl font-black text-[var(--app-text)]">{plant.gardenName}</h2>
+              <h2 className="text-xl font-black text-[var(--app-text)]">{displayPlantName(plant)}</h2>
               {plant.location && <p className="mt-1 text-sm text-[var(--app-text-muted)]">{plant.location}</p>}
               <p className="mt-3 text-sm font-bold text-[var(--app-leaf)]">{plant.plantType || 'Plant Type not set'}</p>
             </div>
@@ -408,16 +440,15 @@ function GardenView({ plants, loading, error, onGrow, onOpenPlant }) {
   );
 }
 
-function GrowView({ draft, error, saving, onChange, onSave, onCancel }) {
+function GrowView({ draft, error, saving, onChange, onPhotoSelected, onSave, onCancel, modeControl }) {
   return (
     <main className="rounded-[16px] border border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-xl shadow-black/10">
-      <p className="text-sm font-black uppercase tracking-[0.2em] text-[var(--app-moss)]">Grow</p>
+      <HeaderKicker label="Grow" action={modeControl} />
       <h1 className="mt-2 text-4xl font-black text-[var(--app-text)]">Save a garden plant</h1>
-      <p className="mt-3 max-w-2xl text-[var(--app-text-muted)]">Garden Name is the only required field. AI ID stays separate from the Plant Type you choose to keep.</p>
       {error && <ErrorBanner>{error}</ErrorBanner>}
       <div className="mt-6 grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <div className="rounded-[14px] border border-[var(--app-border)] bg-[var(--app-panel-soft)] p-4 text-[var(--app-ink)]">
-          {draft.photoDataUrl ? <img src={draft.photoDataUrl} alt="" className="aspect-[4/3] w-full rounded-[12px] object-cover" /> : <div className="flex aspect-[4/3] items-center justify-center rounded-[12px] border border-dashed border-stone-300 bg-stone-100 text-center text-sm text-[var(--app-ink-muted)]">Photo optional for Part 2</div>}
+          <PhotoPicker photoDataUrl={draft.photoDataUrl} onPhotoSelected={onPhotoSelected} />
           <IdentityReadout draft={draft} />
         </div>
         <PlantForm value={draft} onChange={onChange} />
@@ -430,21 +461,26 @@ function GrowView({ draft, error, saving, onChange, onSave, onCancel }) {
   );
 }
 
-function PlantView({ plant, error, saving, onChange, onSave, onBack }) {
+function PlantView({ plant, error, saving, onChange, onPhotoSelected, onSave, onBack, modeControl }) {
   return (
     <main className="rounded-[16px] border border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-xl shadow-black/10">
-      <button className="text-sm font-black text-[var(--app-leaf)]" onClick={onBack}>Back to My Garden</button>
+      <HeaderKicker label="Individual plant" action={modeControl} />
+      <button className="mt-3 text-sm font-black text-[var(--app-leaf)]" onClick={onBack}>Back to My Garden</button>
       <div className="mt-5 grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
-          <PhotoFrame plant={plant} large />
+          <PhotoPicker
+            inputId="plant-photo-input"
+            photoDataUrl={plant.photoDataUrl || plant.photoUrl}
+            emptyLabel="Add Photo"
+            onPhotoSelected={onPhotoSelected}
+          />
           <div className="mt-4 rounded-[14px] border border-[var(--app-border)] bg-[var(--app-panel-soft)] p-4 text-[var(--app-ink)]">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--app-moss-dark)]">AI ID</p>
             <p className="mt-2 font-black">{aiLabel(plant)}</p>
           </div>
         </div>
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-[var(--app-moss)]">Individual plant</p>
-          <h1 className="mt-2 text-4xl font-black text-[var(--app-text)]">{plant.gardenName}</h1>
+          <h1 className="text-4xl font-black text-[var(--app-text)]">{displayPlantName(plant)}</h1>
           {error && <ErrorBanner>{error}</ErrorBanner>}
           <div className="mt-6"><PlantForm value={plant} onChange={onChange} /></div>
           <button className="garden-button garden-button-primary mt-5" disabled={saving} onClick={onSave}>{saving ? 'Saving...' : 'Save edits'}</button>
@@ -458,7 +494,7 @@ function PlantForm({ value, onChange }) {
   const update = (field, nextValue) => onChange({ ...value, [field]: nextValue });
   return (
     <div className="grid gap-4">
-      <label className="grid gap-2"><span className="form-label">Garden Name</span><input className="garden-input" value={value.gardenName || ''} onChange={(event) => update('gardenName', event.target.value)} /></label>
+      <label className="grid gap-2"><span className="form-label">Plant Name</span><input className="garden-input" value={value.plantName || ''} onChange={(event) => update('plantName', event.target.value)} /></label>
       <label className="grid gap-2"><span className="form-label">Location</span><input className="garden-input" value={value.location || ''} onChange={(event) => update('location', event.target.value)} placeholder="on the patio" /></label>
       <label className="grid gap-2"><span className="form-label">Plant Type</span><input className="garden-input" value={value.plantType || ''} onChange={(event) => update('plantType', event.target.value)} /></label>
       <div className="rounded-[12px] border border-[var(--app-border)] bg-[var(--app-panel-soft)] p-4 text-[var(--app-ink)]">
@@ -473,7 +509,36 @@ function IdentityReadout({ draft }) {
   return (
     <div className="mt-4 grid gap-3 text-sm">
       <p><span className="font-black">AI ID:</span> {draft.aiAssessmentState === 'ai_guess' ? draft.aiScientificName || draft.aiCommonName : 'No guess'}</p>
-      <p><span className="font-black">Plant Type:</span> {draft.plantType || 'Editable before saving'}</p>
+      <p><span className="font-black">Plant Type:</span> {draft.plantType || 'Not set'}</p>
+    </div>
+  );
+}
+
+function PhotoPicker({ photoDataUrl, onPhotoSelected, inputId = 'grow-photo-input', emptyLabel = 'Add Photo' }) {
+  const handleChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) onPhotoSelected(file);
+    event.target.value = '';
+  };
+
+  return (
+    <div>
+      <label htmlFor={inputId} className="photo-picker">
+        {photoDataUrl ? <img src={photoDataUrl} alt="" className="aspect-[4/3] w-full rounded-[12px] object-cover" /> : <span>{emptyLabel}</span>}
+      </label>
+      <input id={inputId} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handleChange} />
+      <button type="button" className="garden-button mt-3 w-full" onClick={() => document.getElementById(inputId)?.click()}>
+        {photoDataUrl ? 'Change photo' : 'Browse photo'}
+      </button>
+    </div>
+  );
+}
+
+function HeaderKicker({ label, action }) {
+  return (
+    <div className="flex min-h-12 w-full items-center justify-between gap-4">
+      <p className="text-sm font-black uppercase tracking-[0.2em] text-[var(--app-moss)]">{label}</p>
+      {action}
     </div>
   );
 }

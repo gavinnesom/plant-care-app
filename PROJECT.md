@@ -2,7 +2,7 @@
 
 ## Vision
 
-Plant ID is becoming Gavin's personal garden field guide. It should identify plants from photographs and, when Gavin chooses, save individual plants into My Garden with a garden name, location, recorded identity, AI assessment, care history, and personalized problem-diagnosis guide.
+Plant ID is becoming Gavin's personal garden field guide. It should identify plants from photographs and, when Gavin chooses, save individual plants into My Garden with a plant name, location, recorded identity, AI assessment, care history, and personalized problem-diagnosis guide.
 
 ## Background
 
@@ -26,7 +26,7 @@ This milestone does not implement My Garden, Supabase persistence, owner unlocki
 
 - Identification can be temporary; saving requires an explicit user choice.
 - My Garden is a collection of individual plants, not only species.
-- A saved plant requires only a garden name.
+- A saved plant requires only a plant name.
 - Recorded identity and AI assessment must remain visibly distinct.
 - Manual or nursery-supplied identity must not block requesting an AI assessment.
 - Private garden reads, writes, and photograph requests must be authorized server-side when implemented.

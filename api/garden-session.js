@@ -1,4 +1,10 @@
-const { createSessionCookie, validateOwnerKey, verifySession } = require('../server/garden-session');
+const {
+  checkOwnerUnlockRateLimit,
+  createSessionCookie,
+  recordFailedOwnerUnlock,
+  validateOwnerKey,
+  verifySession,
+} = require('../server/garden-session');
 
 function readJson(req) {
   return new Promise((resolve, reject) => {
@@ -38,10 +44,22 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    const rateLimit = checkOwnerUnlockRateLimit(req);
+    if (!rateLimit.allowed) {
+      res.setHeader('Retry-After', String(rateLimit.retryAfterSeconds));
+      return res.status(429).json({
+        error: {
+          code: 'owner_unlock_rate_limited',
+          message: 'Too many unlock attempts. Try again soon.',
+        },
+      });
+    }
+
     const body = await readJson(req);
     const validation = validateOwnerKey(body.ownerKey);
     if (validation.configError) return res.status(validation.configError.status).json(validation.configError.body);
     if (!validation.ok) {
+      recordFailedOwnerUnlock(req);
       return res.status(401).json({
         error: {
           code: 'invalid_owner_key',

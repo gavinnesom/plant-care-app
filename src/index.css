@@ -33,7 +33,10 @@
   }
 
   html {
-    background: var(--app-page);
+    background:
+      radial-gradient(circle at 14% 18%, rgba(123, 63, 98, 0.24), transparent 28rem),
+      radial-gradient(circle at 86% 8%, rgba(215, 180, 94, 0.16), transparent 24rem),
+      linear-gradient(135deg, #5f6548 0%, #79664c 45%, #4d5d3d 100%);
   }
 
   body {
@@ -41,7 +44,11 @@
     min-width: 320px;
     font-family:
       Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: var(--app-page);
+    background:
+      radial-gradient(circle at 18% 12%, rgba(185, 217, 137, 0.18), transparent 22rem),
+      radial-gradient(circle at 78% 28%, rgba(123, 63, 98, 0.2), transparent 26rem),
+      linear-gradient(145deg, rgba(44, 39, 29, 0.22), transparent 42%),
+      linear-gradient(135deg, #626a4d 0%, #766449 47%, #44583a 100%);
   }
 
   button,
@@ -55,6 +62,35 @@
 }
 
 @layer components {
+  .app-shell {
+    background:
+      radial-gradient(circle at 11% 22%, rgba(244, 239, 226, 0.09), transparent 18rem),
+      radial-gradient(circle at 92% 12%, rgba(94, 47, 74, 0.18), transparent 28rem),
+      repeating-linear-gradient(115deg, rgba(255, 247, 232, 0.035) 0 2px, transparent 2px 16px);
+  }
+
+  .mode-button {
+    display: inline-flex;
+    height: 3rem;
+    width: 3rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 1px solid var(--app-border);
+    background: rgba(89, 71, 53, 0.72);
+    color: var(--app-text);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.16);
+    transition:
+      background 160ms ease,
+      transform 160ms ease;
+  }
+
+  .mode-button:hover {
+    background: var(--app-bark);
+    transform: translateY(-1px);
+  }
+
   .garden-button {
     border-radius: 8px;
     border: 1px solid var(--app-border);
@@ -123,6 +159,32 @@
 
   .garden-tile:hover {
     border-color: var(--app-leaf);
+    transform: translateY(-1px);
+  }
+
+  .photo-picker {
+    display: flex;
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    border: 1px dashed rgba(102, 93, 76, 0.46);
+    background:
+      radial-gradient(circle at 28% 20%, rgba(185, 217, 137, 0.28), transparent 12rem),
+      linear-gradient(145deg, #efe6d4, #d6c8ac);
+    color: var(--app-ink-muted);
+    font-size: 0.95rem;
+    font-weight: 900;
+    text-align: center;
+    transition:
+      border-color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .photo-picker:hover {
+    border-color: var(--app-moss-dark);
     transform: translateY(-1px);
   }
 }

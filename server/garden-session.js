@@ -2,6 +2,9 @@ const crypto = require('node:crypto');
 
 const COOKIE_NAME = 'plant_id_garden_session';
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
+const UNLOCK_WINDOW_MS = 15 * 60 * 1000;
+const UNLOCK_ATTEMPT_LIMIT = 10;
+const unlockAttempts = new Map();
 
 function getOwnerKey() {
   return process.env.PLANT_ID_OWNER_KEY || '';
@@ -39,6 +42,48 @@ function parseCookies(req) {
         return [decodeURIComponent(part.slice(0, index)), decodeURIComponent(part.slice(index + 1))];
       })
   );
+}
+
+function requestIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) return forwarded.split(',')[0].trim();
+  return req.socket?.remoteAddress || 'unknown';
+}
+
+function unlockKeyForRequest(req) {
+  return crypto.createHash('sha256').update(requestIp(req)).digest('base64url');
+}
+
+function pruneUnlockAttempts(now = Date.now()) {
+  for (const [key, entry] of unlockAttempts.entries()) {
+    if (entry.resetAt <= now) unlockAttempts.delete(key);
+  }
+}
+
+function checkOwnerUnlockRateLimit(req, now = Date.now()) {
+  pruneUnlockAttempts(now);
+  const key = unlockKeyForRequest(req);
+  const entry = unlockAttempts.get(key);
+  if (!entry || entry.resetAt <= now || entry.count < UNLOCK_ATTEMPT_LIMIT) return { allowed: true };
+  return {
+    allowed: false,
+    retryAfterSeconds: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)),
+  };
+}
+
+function recordFailedOwnerUnlock(req, now = Date.now()) {
+  pruneUnlockAttempts(now);
+  const key = unlockKeyForRequest(req);
+  const current = unlockAttempts.get(key);
+  if (!current || current.resetAt <= now) {
+    unlockAttempts.set(key, { count: 1, resetAt: now + UNLOCK_WINDOW_MS });
+    return;
+  }
+  current.count += 1;
+}
+
+function clearOwnerUnlockAttemptsForTests() {
+  unlockAttempts.clear();
 }
 
 function sessionConfigError() {
@@ -117,7 +162,11 @@ function requireGardenSession(req, res) {
 module.exports = {
   COOKIE_NAME,
   SESSION_SECONDS,
+  UNLOCK_ATTEMPT_LIMIT,
+  checkOwnerUnlockRateLimit,
+  clearOwnerUnlockAttemptsForTests,
   createSessionCookie,
+  recordFailedOwnerUnlock,
   requireGardenSession,
   validateOwnerKey,
   verifySession,
