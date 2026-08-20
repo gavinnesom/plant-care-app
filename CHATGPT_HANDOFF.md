@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented.
+Blocked pending external configuration authorization.
 
 ## Source
 
@@ -67,7 +67,7 @@ Part 1 also moved multipart parsing and result normalization into `api/plant-ide
 
 ## Codex implementation outcome
 
-Implemented by Codex on 2026-08-20.
+Blocked by Codex on 2026-08-20 after diagnosis and partial hotfix work.
 
 Initial local state:
 
@@ -75,9 +75,10 @@ Initial local state:
 - Commit: `748832ee99a4c2dace8ea0478a332f3805356d53`
 - `git status --short`: clean
 
-Hotfix branch:
+Hotfix branch and draft PR:
 
 - `codex/plant-id-production-hotfix`
+- Draft PR: `https://github.com/gavinnesom/plant-care-app/pull/2`
 
 Production evidence and diagnosis:
 
@@ -86,7 +87,10 @@ Production evidence and diagnosis:
 - Historical production error-log queries around the reported failure did not return error details.
 - One authorized production POST using a non-sensitive public Cordyline image reproduced the failure: `HTTP 500` with the generic unavailable message.
 - Immediate production logs showed only a serverless POST request envelope for `/api/identify-plant` with no error detail. Root cause evidence: the handler catch path logged via `devLog`, which is disabled in production, so production 500s were not diagnosable from logs.
-- The implemented repair moves the shared core module out of the Vercel route directory and adds sanitized production-safe server error logging. No secrets were exposed.
+- The partial code repair moves the shared core module out of the Vercel route directory and adds sanitized production-safe server error logging. No secrets were exposed.
+- Preview verification after the logging change identified the actual failing boundary: `rate_limit`.
+- Redacted preview error evidence: `TypeError: fetch failed`, boundary `rate_limit`, cause code `ENOTFOUND`, cause message `getaddrinfo ENOTFOUND [redacted Upstash hostname]`.
+- Root cause: the configured Vercel KV/Upstash endpoint host for Plant ID Preview/Production does not resolve. This requires external Vercel/Upstash configuration repair or replacement; Codex did not alter environment variables or secrets.
 
 Changed files:
 
@@ -116,5 +120,20 @@ git diff --check
 ```
 
 Passed with no whitespace errors.
+
+Draft PR / preview verification:
+
+- Draft PR #2 was opened for `codex/plant-id-production-hotfix` targeting `main`.
+- Preview deployment inspected: `https://plant-care-pzaz4uxfd-gavins-projects-a20eaba9.vercel.app`, status Ready.
+- Preview function inspection showed only `api/identify-plant`; `api/plant-identification-core` was no longer deployed as a function.
+- Preview homepage returned `200` through authenticated `vercel curl`.
+- Preview non-POST `/api/identify-plant` returned `405`.
+- Preview `/api/plant-identification-core` returned `404`.
+- A real multipart preview POST was attempted with a non-sensitive public Cordyline image. It returned `HTTP 500`; logs identified the failing boundary as Vercel KV/Upstash rate limiting with DNS `ENOTFOUND`.
+
+Authorization needed from Gavin:
+
+- Repair or replace the Plant ID Vercel KV/Upstash environment configuration for Preview and Production. Specifically, the configured Upstash REST URL host must resolve and point to an active Redis/KV database.
+- After that external configuration is fixed, rerun the preview multipart POST. The current draft PR should remain unmerged until a real preview identification returns `200` with a valid `result`.
 
 No Part 2 work, My Garden, Supabase, authentication, saved plants, multiple photographs, print/PDF, styling, response schema, prompt, rate-limit policy, production environment, MemoryEngine, main-branch push, merge, or production deployment was performed.
