@@ -2,7 +2,7 @@
 
 ## Status
 
-Active.
+Implemented.
 
 ## Source
 
@@ -354,3 +354,35 @@ Do not implement:
 - unrelated cleanup in MemoryEngine, Miscellany, or other GavinApps systems.
 
 Those belong to later parts or are explicitly deferred.
+
+## Codex implementation outcome
+
+Implemented on 2026-08-20 before Part 2 merge.
+
+- Branch: `codex/plant-id-private-garden-foundation`.
+- Draft PR: `https://github.com/gavinnesom/plant-care-app/pull/3`.
+- Implementation commit: `ca089e3c38a3a4b51993e70034676f1885ba04c4`.
+- Added private My Garden foundation with owner-key unlock, signed 30-day session cookies, Garden gallery, Grow form, Add to Garden from identification, individual plant detail/edit page, and mirrored Cordyline/camera mode controls.
+- Added authorized server endpoints: `api/garden-session.js`, `api/garden-plants.js`, `api/garden-plants/[id].js`, and `api/garden-photos/[id].js`.
+- Added server boundaries: `server/db.js`, `server/garden-session.js`, and `server/garden-store.js`.
+- Added migration `supabase/migrations/202608200002_plant_id_private_garden.sql` for `plant_id.garden_plants`, `plant_id.garden_photos`, active indexes, and update triggers.
+- Applied the migration to the shared GavinApps Supabase project; only `plant_id` objects were created/inspected.
+- Added server-only Vercel Preview/Production env vars `PLANT_ID_OWNER_KEY` and `PLANT_ID_SESSION_SECRET`. Values were not printed or committed. A generated local copy exists in ignored `.env.local` for Gavin's machine.
+- Preserved the public one-photo identification flow and added the unobtrusive `Add to Garden` result action.
+- Persisted AI ID separately from editable Plant Type; manual plants use AI state `none` / `No guess`.
+- Stored saved photos privately in Plant ID-owned Supabase/Postgres rows and served them only through the authorized photo API.
+- Added a first-pass warmer garden visual refresh using bark, moss, leaf, off-white, gold, and plum tones.
+
+Verification before merge:
+
+- `npm test`: pass, 14 tests.
+- `npm run build`: pass; existing Vite CJS and stale Browserslist warnings only.
+- `git diff --check`: pass.
+- API module load check: pass.
+- Vercel environment names confirmed: `OPENAI_API_KEY`, `SUPABASE_DB_URL`, `PLANT_ID_OWNER_KEY`, and `PLANT_ID_SESSION_SECRET`.
+- Preview deployment `https://plant-care-7xj9zuaj9-gavins-projects-a20eaba9.vercel.app`: Ready.
+- Preview functions: `api/identify-plant`, `api/garden-session`, `api/garden-plants`, `api/garden-plants/[id]`, and `api/garden-photos/[id]`.
+- Preview smoke: homepage `200`, locked Garden list `401`, unlock `200`, session check `200`, manual no-guess plant create `201`, AI/photo plant create `201`, Garden list `200`, private photo fetch `200`, old helper route `404`.
+- Preview test records named `Part 2 Preview Manual` and `Part 2 Preview Cordyline` were soft-deleted after verification.
+
+Production verification is intentionally not recorded here because it occurs after this committed handoff update, PR squash merge, and Vercel production deployment.
