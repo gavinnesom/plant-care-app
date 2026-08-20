@@ -73,4 +73,4 @@ PLANT_ID_FORCE_RATE_LIMIT
 
 ## Last Implementation Summary
 
-The standards foundation pass adopted canonical project documents, preserved the approved README product direction, added a small Node unit-test foundation for existing API helper behavior, and kept current product behavior unchanged.
+The production hotfix replaced Redis/Upstash rate limiting with an isolated Supabase/Postgres limiter in the shared GavinApps Supabase project. Plant ID owns only the `plant_id` schema objects from `supabase/migrations/202608200001_plant_id_rate_limits.sql`; MemoryEngine and Miscellany objects remain untouched.

@@ -138,16 +138,59 @@ Do not keep Redis as a fallback. If Supabase rate limiting is unavailable in pro
 
 ## Codex implementation outcome
 
-To be completed by Codex. Include:
+Implemented on 2026-08-20.
 
-- final status and date;
-- branch, commit SHA, draft PR URL, and Preview URL;
-- Plant ID database objects created and migration path;
-- confirmation that MemoryEngine and Miscellany objects were not modified;
-- Redis/Upstash packages, code, variables, documentation, and project connection removed;
-- Supabase environment-variable names and scopes, without values;
-- test, build, diff, secret-scan, and Git-status results;
-- deployed route/function inspection;
-- real Preview identification status and high-level result;
-- confirmation that no merge, main push, production deployment, provider-account deletion, or unauthorized shared-project change occurred;
-- any warnings or blockers remaining.
+- Branch: `codex/plant-id-production-hotfix`.
+- Draft PR: `https://github.com/gavinnesom/plant-care-app/pull/2`.
+- Implementation commit: `4c9f02b478a3c0eda274cfa2531ae5a08cd6aad3`.
+- Final documentation/outcome commit: pending at time of this outcome edit.
+- Verified Preview: `https://plant-care-cezkcxmpf-gavins-projects-a20eaba9.vercel.app`.
+
+Created and applied Plant ID-owned Supabase objects from `supabase/migrations/202608200001_plant_id_rate_limits.sql`:
+
+- schema `plant_id`;
+- table `plant_id.rate_limit_buckets`;
+- primary-key index `rate_limit_buckets_pkey`;
+- cleanup index `plant_id_rate_limit_buckets_cleanup_idx`;
+- function `plant_id.check_rate_limit(...)`.
+
+The migration was applied to the existing shared GavinApps Supabase project. Only the new `plant_id` schema objects were created or inspected; no MemoryEngine or Miscellany tables, functions, storage, application code, or domain behavior were modified. The rate limiter stores hashed client keys and bounded fixed-window counters, and cleanup runs during normal checks.
+
+Redis/Upstash was removed from active Plant ID code and setup:
+
+- removed `@upstash/ratelimit` and `@upstash/redis` from `package.json` and `package-lock.json`;
+- removed Redis imports, initialization, env fallbacks, and runtime support;
+- removed active Redis/KV setup documentation and examples;
+- confirmed no active Redis/Upstash references remain outside this historical handoff text.
+
+Vercel Plant ID environment configuration now contains these names only for the hotfix dependencies:
+
+- `OPENAI_API_KEY`: Preview and Production;
+- `SUPABASE_URL`: Preview and Production;
+- `SUPABASE_DB_URL`: Preview and Production.
+
+The obsolete Plant ID Vercel variables `KV_REST_API_TOKEN`, `KV_REST_API_URL`, `KV_REST_API_READ_ONLY_TOKEN`, `KV_URL`, and `REDIS_URL` were removed. `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` were already absent. The first Supabase DB URL attempt used the direct Supabase host and failed in Preview with DNS `ENOTFOUND`; Plant ID was then updated to the verified Supabase transaction pooler URL through Vercel stdin without printing the secret value.
+
+Verification completed:
+
+- `npm test`: pass, 9 tests.
+- `npm run build`: pass; Vite CJS and stale Browserslist warnings only.
+- `git diff --check`: pass before implementation commit.
+- Redis/Upstash active-reference scan: pass.
+- Built frontend secret scan for Supabase/OpenAI/database markers: pass.
+- Supabase migration apply: pass.
+- Supabase live function probe: pass.
+- Vercel Preview deployment inspect: Ready, target Preview, only function `api/identify-plant`.
+- Preview homepage via authenticated `vercel curl`: HTTP 200.
+- Preview `GET /api/identify-plant`: HTTP 405 with `Allow: POST`.
+- Preview `/api/plant-identification-core`: HTTP 404 and not deployed as a function.
+- Real multipart Preview POST with public Cordyline image: HTTP 200, valid `result`, `commonName` `Cordyline`, `scientificName` `Cordyline australis`, confidence `0.85`, rate-limit headers present.
+- Database counter summary after Preview POST: `client` scope had 2 bucket rows / total count 2; `global` scope had 1 bucket row / total count 2. Raw client identifiers were not printed.
+
+Warnings:
+
+- `npm install` / `npm uninstall` surfaced existing npm audit vulnerability counts; no dependency-audit remediation was in this handoff scope.
+- Repeated `npx vercel` calls used temporary npm caches because the home npm cache has permission issues; the Vercel CLI also emitted package deprecation notices and an npm major-version notice.
+- Plain unauthenticated `curl` to Preview returned Vercel SSO protection redirects, so route and POST checks used authenticated `vercel curl`.
+
+No merge, main push, production deployment, provider-account deletion, or unauthorized shared-project change was performed. PR #2 remains a draft and unmerged.
