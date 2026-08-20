@@ -15,7 +15,7 @@ Plant ID is a working Vite, React, Tailwind, and Vercel serverless plant-identif
 - Care card rendering with confidence, alternatives, trait badges, warnings, expandable sections, and fun fact.
 - Supabase-backed rate limiting before OpenAI calls using isolated Plant ID database objects.
 - Owner-key unlock with a secure 30-day per-device Garden session.
-- Private My Garden list, Grow form with one optional manual photo, individual plant page with one-photo add/replace, editable Plant Type, and separate AI ID.
+- Private My Garden list, Grow form with one optional manual photo, individual plant page with one-photo add/replace, detail-page soft delete, editable Plant Type, and separate AI ID.
 - Server-side throttling for repeated failed owner-key unlock attempts.
 - Private server-authorized saved photo retrieval from isolated Plant ID Supabase/Postgres objects.
 - Debug status panel hidden unless `?debug=1`.
@@ -65,7 +65,7 @@ PLANT_ID_FORCE_RATE_LIMIT
 - Every private garden read, write, and photograph request must be authorized server-side.
 - Future Plant ID persistence should reuse the existing GavinApps Supabase project with separate Plant ID tables and private photograph storage.
 - Plant ID must not use or modify MemoryEngine tables, API, authentication, or domain model.
-- Garden deletion should initially be recoverable with useful timestamps retained.
+- Garden deletion is recoverable at the data-model level with useful timestamps retained; full trash/restore UI remains deferred.
 
 ## Known Limitations
 

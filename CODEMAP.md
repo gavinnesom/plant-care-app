@@ -45,7 +45,7 @@ flowchart TD
 | `api/identify-plant.js` | Serverless API orchestration, rate limiting, OpenAI call, response |
 | `api/garden-session.js` | Owner unlock and Garden session status |
 | `api/garden-plants.js` | Authorized Garden list/create |
-| `api/garden-plants/[id].js` | Authorized individual plant read/edit |
+| `api/garden-plants/[id].js` | Authorized individual plant read/edit/soft delete |
 | `api/garden-photos/[id].js` | Authorized private photo bytes |
 | `server/plant-identification-core.js` | Multipart image extraction, model JSON extraction, normalized result validation |
 | `server/db.js` | Shared Postgres pool |
