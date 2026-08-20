@@ -15,7 +15,7 @@ The approved product direction is now a private personal garden field guide with
 - OpenAI Responses API call with image input.
 - Strict JSON extraction and normalization through a testable server-side core module outside the Vercel API route directory.
 - Care card rendering with confidence, alternatives, trait badges, warnings, expandable sections, and fun fact.
-- Upstash/Vercel KV-backed rate limiting before OpenAI calls.
+- Supabase-backed rate limiting before OpenAI calls using isolated Plant ID database objects.
 - Debug status panel hidden unless `?debug=1`.
 
 ## Verified Commands
@@ -42,8 +42,8 @@ Required server-side environment variables:
 ```text
 OPENAI_API_KEY
 OPENAI_MODEL
-UPSTASH_REDIS_REST_URL or KV_REST_API_URL
-UPSTASH_REDIS_REST_TOKEN or KV_REST_API_TOKEN
+SUPABASE_URL
+SUPABASE_DB_URL
 PLANT_ID_IP_LIMIT
 PLANT_ID_IP_WINDOW
 PLANT_ID_DAILY_GLOBAL_LIMIT

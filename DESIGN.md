@@ -5,8 +5,8 @@
 The current app is a small Vite React frontend plus one Vercel-compatible serverless function.
 
 - The frontend owns file selection, local preview, loading/error state, and result rendering.
-- The API route owns request orchestration, image validation, rate limiting, OpenAI calls, and response handling. `server/plant-identification-core.js` owns multipart image extraction, model JSON extraction, and result normalization.
-- There is no current database, authentication, persistent storage, or saved plant model.
+- The API route owns request orchestration, image validation, rate limiting, OpenAI calls, and response handling. `server/plant-identification-core.js` owns multipart image extraction, model JSON extraction, and result normalization. `server/rate-limit.js` owns the server-only Supabase rate-limit boundary.
+- There is no current saved-plant database, authentication, persistent plant storage, or saved plant model. The only current database use is bounded server-side rate-limit counters.
 
 ## Current Data Flow
 
@@ -29,9 +29,10 @@ The current app is a small Vite React frontend plus one Vercel-compatible server
 
 ## Important Invariants
 
-- The browser never receives OpenAI, Upstash, Vercel KV, Supabase, or owner-passphrase secrets.
+- The browser never receives OpenAI, Supabase database, or owner-passphrase secrets.
 - Server-side rate limiting runs before image parsing and before OpenAI calls.
 - Production fails closed if rate limiting is not configured.
+- Plant ID database objects must stay isolated in the `plant_id` schema and must not alter MemoryEngine or Miscellany objects.
 - AI identification must communicate uncertainty and safety caveats.
 - Future recorded identity and AI assessment must not silently overwrite each other.
 - Future private My Garden access must be authorized server-side for every garden read, write, and photograph request.

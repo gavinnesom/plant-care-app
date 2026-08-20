@@ -42,6 +42,8 @@ flowchart TD
 | `src/index.css` | Tailwind import and app color variables |
 | `api/identify-plant.js` | Serverless API orchestration, rate limiting, OpenAI call, response |
 | `server/plant-identification-core.js` | Multipart image extraction, model JSON extraction, normalized result validation |
+| `server/rate-limit.js` | Server-only Supabase-backed rate-limit boundary |
+| `supabase/migrations/202608200001_plant_id_rate_limits.sql` | Isolated Plant ID schema, table, cleanup index, and atomic rate-limit function |
 | `tests/identify-plant.test.cjs` | Unit tests for existing API helper behavior |
 
 ## How To Change
@@ -51,6 +53,7 @@ flowchart TD
 | Change current upload validation | `src/components/UploadPanel.jsx` | `src/lib/plantSchema.js`, `api/identify-plant.js` | `npm test`, `npm run build` |
 | Change result fields or care sections | `server/plant-identification-core.js` | `api/identify-plant.js`, `src/components/ResultPanel.jsx`, `src/lib/plantSchema.js` | `npm test`, `npm run build` |
 | Change OpenAI prompt or model behavior | `api/identify-plant.js` | `README.md`, `DESIGN.md` | `npm test`, manual `npx vercel dev` check with credentials |
+| Change rate limiting | `server/rate-limit.js` | `api/identify-plant.js`, `supabase/migrations/` | `npm test`, `npm run build`, Vercel preview POST |
 | Add My Garden persistence | `DESIGN.md` | `PROJECT.md`, `TODO.md`, future Supabase schema | Add focused unit/integration tests before UI wiring |
 | Add project-specific browser tests | new `playwright.config.*` | `tests/e2e/`, README commands | project Playwright command |
 | Update deployment setup | `README.md` | `PROJECT_STATUS.md`, `.env.example` | `npm run build` and Vercel preview checks |

@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const { extractJson, parseMultipartImage, validatePlantResult } = require('../server/plant-identification-core');
+const { checkSupabaseRateLimit, hashClientIdentifier, parseWindowSeconds } = require('../server/rate-limit');
 
 function validRawResult(overrides = {}) {
   return {
@@ -134,4 +135,81 @@ test('plant-identification core does not live in the Vercel API route directory'
   const apiCorePath = path.join(__dirname, '..', 'api', 'plant-identification-core.js');
 
   assert.equal(fs.existsSync(apiCorePath), false);
+});
+
+test('rate-limit window parsing preserves configured defaults', () => {
+  assert.equal(parseWindowSeconds('1 h', 99), 60 * 60);
+  assert.equal(parseWindowSeconds('1 d', 99), 24 * 60 * 60);
+  assert.equal(parseWindowSeconds('15 minutes', 99), 15 * 60);
+  assert.equal(parseWindowSeconds('nonsense', 99), 99);
+});
+
+test('rate-limit client keys are stable hashes instead of raw identifiers', () => {
+  const hash = hashClientIdentifier('203.0.113.10');
+
+  assert.equal(hash.length, 64);
+  assert.notEqual(hash, '203.0.113.10');
+  assert.equal(hash, hashClientIdentifier('203.0.113.10'));
+});
+
+test('missing Supabase rate-limit config allows local development requests', async () => {
+  const previousDbUrl = process.env.SUPABASE_DB_URL;
+  const previousVercelEnv = process.env.VERCEL_ENV;
+  delete process.env.SUPABASE_DB_URL;
+  delete process.env.VERCEL_ENV;
+
+  try {
+    const result = await checkSupabaseRateLimit({
+      clientIdentifier: '203.0.113.10',
+      clientLimit: 15,
+      clientWindowSeconds: 60 * 60,
+      globalLimit: 100,
+      globalWindowSeconds: 24 * 60 * 60,
+    });
+
+    assert.deepEqual(result, { configured: false, response: null });
+  } finally {
+    if (previousDbUrl === undefined) {
+      delete process.env.SUPABASE_DB_URL;
+    } else {
+      process.env.SUPABASE_DB_URL = previousDbUrl;
+    }
+    if (previousVercelEnv === undefined) {
+      delete process.env.VERCEL_ENV;
+    } else {
+      process.env.VERCEL_ENV = previousVercelEnv;
+    }
+  }
+});
+
+test('missing Supabase rate-limit config fails closed in Vercel deployments', async () => {
+  const previousDbUrl = process.env.SUPABASE_DB_URL;
+  const previousVercelEnv = process.env.VERCEL_ENV;
+  delete process.env.SUPABASE_DB_URL;
+  process.env.VERCEL_ENV = 'preview';
+
+  try {
+    const result = await checkSupabaseRateLimit({
+      clientIdentifier: '203.0.113.10',
+      clientLimit: 15,
+      clientWindowSeconds: 60 * 60,
+      globalLimit: 100,
+      globalWindowSeconds: 24 * 60 * 60,
+    });
+
+    assert.equal(result.configured, false);
+    assert.equal(result.response.status, 503);
+    assert.equal(result.response.body.error.code, 'rate_limit_not_configured');
+  } finally {
+    if (previousDbUrl === undefined) {
+      delete process.env.SUPABASE_DB_URL;
+    } else {
+      process.env.SUPABASE_DB_URL = previousDbUrl;
+    }
+    if (previousVercelEnv === undefined) {
+      delete process.env.VERCEL_ENV;
+    } else {
+      process.env.VERCEL_ENV = previousVercelEnv;
+    }
+  }
 });

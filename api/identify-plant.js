@@ -1,23 +1,17 @@
-const { Ratelimit } = require('@upstash/ratelimit');
-const { Redis } = require('@upstash/redis');
 const { extractJson, parseMultipartImage, validatePlantResult } = require('../server/plant-identification-core');
+const { checkSupabaseRateLimit, parseWindowSeconds } = require('../server/rate-limit');
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const LOW_CONFIDENCE_THRESHOLD = 0.68;
 const isDevelopment = process.env.NODE_ENV !== 'production';
-const isProduction = process.env.VERCEL_ENV === 'production';
 const IP_LIMIT = Number.parseInt(process.env.PLANT_ID_IP_LIMIT || '15', 10);
-const IP_WINDOW = process.env.PLANT_ID_IP_WINDOW || '1 h';
+const IP_WINDOW_SECONDS = parseWindowSeconds(process.env.PLANT_ID_IP_WINDOW, 60 * 60);
 const DAILY_GLOBAL_LIMIT = Number.parseInt(process.env.PLANT_ID_DAILY_GLOBAL_LIMIT || '100', 10);
-const DAILY_GLOBAL_WINDOW = process.env.PLANT_ID_DAILY_GLOBAL_WINDOW || '1 d';
+const DAILY_GLOBAL_WINDOW_SECONDS = parseWindowSeconds(process.env.PLANT_ID_DAILY_GLOBAL_WINDOW, 24 * 60 * 60);
 const RATE_LIMIT_ERROR_MESSAGE = 'This public demo has reached its usage limit. Please try again later.';
-const RATE_LIMIT_NOT_CONFIGURED_MESSAGE = 'Plant identification is temporarily unavailable.';
 const UNKNOWN_CLIENT_ID = 'unknown-client';
-const FORCE_LOCAL_RATE_LIMIT = !isProduction && process.env.PLANT_ID_FORCE_RATE_LIMIT === '1';
-
-let rateLimiters = null;
-let warnedMissingRateLimitConfig = false;
+const FORCE_LOCAL_RATE_LIMIT = process.env.VERCEL_ENV !== 'production' && process.env.PLANT_ID_FORCE_RATE_LIMIT === '1';
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -60,33 +54,6 @@ function logServerError(error, status) {
 function wrapBoundaryError(error, boundary) {
   error.boundary = boundary;
   return error;
-}
-
-function hasRateLimitConfig() {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  return Boolean(url && token);
-}
-
-function getRateLimiters() {
-  if (!hasRateLimitConfig()) return null;
-  if (rateLimiters) return rateLimiters;
-
-  const redis = Redis.fromEnv();
-  rateLimiters = {
-    ip: new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(IP_LIMIT, IP_WINDOW),
-      prefix: 'plant-id:ip',
-    }),
-    global: new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(DAILY_GLOBAL_LIMIT, DAILY_GLOBAL_WINDOW),
-      prefix: 'plant-id:global',
-    }),
-  };
-
-  return rateLimiters;
 }
 
 function getClientIdentifier(req) {
@@ -148,56 +115,38 @@ async function checkRateLimit(req, res) {
     });
   }
 
-  const limiters = getRateLimiters();
-
-  if (!limiters) {
-    if (isProduction) {
-      return res.status(503).json({
-        error: {
-          code: 'rate_limit_not_configured',
-          message: RATE_LIMIT_NOT_CONFIGURED_MESSAGE,
-        },
-      });
-    }
-
-    if (!warnedMissingRateLimitConfig) {
-      console.warn(
-        '[Plant ID API] Upstash rate limiting is not configured. Local development requests will be allowed.'
-      );
-      warnedMissingRateLimitConfig = true;
-    }
-    return null;
-  }
-
   const clientId = getClientIdentifier(req);
-  let clientResult;
-  let globalResult;
+  let rateLimit;
   try {
-    [clientResult, globalResult] = await Promise.all([
-      limiters.ip.limit(clientId),
-      limiters.global.limit('all'),
-    ]);
+    rateLimit = await checkSupabaseRateLimit({
+      clientIdentifier: clientId,
+      clientLimit: IP_LIMIT,
+      clientWindowSeconds: IP_WINDOW_SECONDS,
+      globalLimit: DAILY_GLOBAL_LIMIT,
+      globalWindowSeconds: DAILY_GLOBAL_WINDOW_SECONDS,
+    });
   } catch (error) {
     throw wrapBoundaryError(error, 'rate_limit');
   }
 
+  if (rateLimit.response?.status) {
+    return res.status(rateLimit.response.status).json(rateLimit.response.body);
+  }
+
+  if (!rateLimit.configured) {
+    return null;
+  }
+
   devLog('info', '[Plant ID API] Rate limit checked', {
-    clientId,
-    clientSuccess: clientResult.success,
-    clientRemaining: clientResult.remaining,
-    globalSuccess: globalResult.success,
-    globalRemaining: globalResult.remaining,
+    clientSuccess: rateLimit.response.success,
+    remaining: rateLimit.response.remaining,
   });
 
-  if (!clientResult.success) {
-    return rateLimitedResponse(res, clientResult);
+  if (!rateLimit.response.success) {
+    return rateLimitedResponse(res, rateLimit.response);
   }
 
-  if (!globalResult.success) {
-    return rateLimitedResponse(res, globalResult);
-  }
-
-  setRateLimitHeaders(res, clientResult);
+  setRateLimitHeaders(res, rateLimit.response);
   return null;
 }
 

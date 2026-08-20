@@ -108,14 +108,11 @@ Optional model override:
 OPENAI_MODEL=gpt-4.1-mini
 ```
 
-Add Upstash Redis settings for rate limiting:
+Add Supabase settings for server-side rate limiting:
 
 ```bash
-UPSTASH_REDIS_REST_URL=your_upstash_rest_url
-UPSTASH_REDIS_REST_TOKEN=your_upstash_rest_token
-# Vercel KV/Upstash integrations may provide these names instead:
-KV_REST_API_URL=your_kv_rest_api_url
-KV_REST_API_TOKEN=your_kv_rest_api_token
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_DB_URL=your_server_only_supabase_database_url
 PLANT_ID_IP_LIMIT=15
 PLANT_ID_IP_WINDOW=1 h
 PLANT_ID_DAILY_GLOBAL_LIMIT=100
@@ -137,8 +134,8 @@ The app is only working end-to-end when clicking `Identify plant` sends a multip
 
 1. Connect the repo to Vercel.
 2. Add `OPENAI_API_KEY` in Vercel project settings.
-3. Connect an Upstash/Vercel KV Redis database to the project.
-4. Confirm Vercel added either `KV_REST_API_URL` / `KV_REST_API_TOKEN` or `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`.
+3. Add `SUPABASE_URL` and the server-only `SUPABASE_DB_URL` used by the shared GavinApps Supabase project.
+4. Apply the tracked Plant ID migration in `supabase/migrations/202608200001_plant_id_rate_limits.sql`.
 5. Optionally add `OPENAI_MODEL` and rate-limit override values.
 6. Deploy.
 
@@ -168,21 +165,23 @@ PLANT_ID_DAILY_GLOBAL_LIMIT=100
 PLANT_ID_DAILY_GLOBAL_WINDOW=1 d
 ```
 
+The rate limiter stores bounded fixed-window counters in the isolated `plant_id` schema. It hashes client identifiers before storage and removes expired counter rows during normal checks.
+
 Local development behavior:
 
-- If Upstash/Vercel KV env vars are missing, requests are allowed.
+- If `SUPABASE_DB_URL` is missing, requests are allowed.
 - The API logs a local warning so development is not blocked.
-- To test the `429` UI locally without real Redis credentials or OpenAI usage, temporarily run Vercel dev with `PLANT_ID_FORCE_RATE_LIMIT=1`. This deny-only helper is ignored when `VERCEL_ENV=production`.
+- To test the `429` UI locally without real Supabase credentials or OpenAI usage, temporarily run Vercel dev with `PLANT_ID_FORCE_RATE_LIMIT=1`. This deny-only helper is ignored when `VERCEL_ENV=production`.
 
 Production behavior:
 
-- If `VERCEL_ENV=production` and Upstash/Vercel KV env vars are missing, the API returns a safe `503` response before calling OpenAI.
+- If Vercel has a deployment environment and `SUPABASE_DB_URL` is missing, the API returns a safe `503` response before calling OpenAI.
 - Rate-limited requests return `429` and do not call OpenAI.
 
 Recommended Vercel setup:
 
-- Add `OPENAI_API_KEY` plus either `KV_REST_API_URL` / `KV_REST_API_TOKEN` or `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` for both Preview and Production.
-- Keep all API keys and Redis tokens server-side only.
+- Add `OPENAI_API_KEY`, `SUPABASE_URL`, and `SUPABASE_DB_URL` for both Preview and Production.
+- Keep all API keys and database credentials server-side only.
 
 ## Important Files
 
@@ -193,6 +192,8 @@ Recommended Vercel setup:
 - `src/components/TraitBadge.jsx`: maps care enums to polished badges
 - `src/lib/plantSchema.js`: shared frontend schema constants and trait copy
 - `api/identify-plant.js`: Vercel-compatible OpenAI vision endpoint
+- `server/rate-limit.js`: server-only Supabase-backed rate-limit boundary
+- `supabase/migrations/202608200001_plant_id_rate_limits.sql`: isolated Plant ID rate-limit schema and function
 
 ## Safety Note
 
