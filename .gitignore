@@ -13,5 +13,7 @@ plantpage.html
 .cache/
 .vite/
 coverage/
+playwright-report/
+test-results/
 HANDOFF.md
 CHATGPT_HANDOFF.md
