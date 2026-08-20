@@ -2,42 +2,44 @@
 
 ## Current State
 
-Plant ID is a working Vite, React, Tailwind, and Vercel serverless plant-identification app. The current implementation supports selected photo sets of up to 5 uploaded images, local previews, server-side rate limiting, OpenAI vision identification, structured response validation, low-confidence warnings, a rendered care card, and a private My Garden foundation.
+Plant ID is a working Vite, React, Tailwind, and Vercel serverless plant-identification app. It supports temporary multi-photo identification, a private My Garden, purpose-aware saved photos, durable AI assessments, personalized care guides, dated observations, and explicit problem diagnosis.
 
 ## What Works
 
-- Up to 5 JPG, PNG, or WebP uploads, each up to 8 MB.
+- Up to 5 selected JPG, PNG, or WebP images per AI request, each up to 8 MB.
 - Local browser previews with add/remove before identification.
-- Multipart POST to `/api/identify-plant`.
-- Server-side image-set parsing and validation, including max count and aggregate size.
-- OpenAI Responses API call with all selected images in one request.
-- Strict JSON extraction and normalization through a testable server-side core module outside the Vercel API route directory.
-- Care card rendering with confidence, alternatives, trait badges, warnings, expandable sections, and fun fact.
-- Supabase-backed rate limiting before OpenAI calls using isolated Plant ID database objects.
+- Multipart public identification with server-side validation and fixed-window rate limiting before OpenAI work.
+- Structured OpenAI Responses output, low-confidence warnings, alternatives, care traits, and safety caveats.
 - Owner-key unlock with a secure 30-day per-device Garden session.
-- Private My Garden list, Grow form with zero/one/multiple optional photos, individual plant page with multiple saved photos, photo add/remove, explicit saved-plant AI identification/re-identification, detail-page soft delete, editable Plant Type, and separate AI ID.
-- Server-side throttling for repeated failed owner-key unlock attempts.
-- Private server-authorized saved photo retrieval from isolated Plant ID Supabase/Postgres objects.
+- Private Garden list, Grow form, individual plant records, photo add/remove, soft delete, editable Plant Type, and separate AI ID.
+- An uncapped saved-photo library with identity/reference and observation/problem purposes. Only a bounded, selected set is sent to an AI request.
+- Durable AI assessment history and a current personalized care guide with generation provenance and preserved input context.
+- Dated observations with optional problem photos and explicit diagnosis using selected observations, their problem photos, and only deliberately selected reference photos.
+- Private, server-authorized saved-photo retrieval and throttling for repeated failed unlock attempts.
+- ESLint, Prettier, Node tests, and Playwright desktop/mobile smoke coverage.
 - Debug status panel hidden unless `?debug=1`.
 
 ## Verified Commands
 
-Verified during the standards foundation pass on 2026-08-19:
+Verified during Part 4 on 2026-08-20:
 
 ```bash
 npm test
+npm run lint
+npm run format:check
 npm run build
+npm run test:e2e
+git diff --check
 ```
 
-`npx vercel dev` remains the correct local command for end-to-end identification, but it requires local credentials and was not reverified during the foundation pass.
+The local browser suite passed at desktop and mobile widths. A Vercel Preview also passed authenticated Garden checks against the migrated Plant ID schema, including durable reassessment, care-guide v2, observation, diagnosis v2, and reversible multipart photo upload/removal. Final production verification is recorded in the release handoff.
 
 ## Environment and Deployment
 
 - Repository: `https://github.com/gavinnesom/plant-care-app.git`
 - Local path: `/Users/gavinnesom/Code/plant-id-starter`
-- Production custom domain recorded in legacy notes: `https://plants.gavinnesom.com`
-- Canonical Vercel project recorded in legacy notes: `plant-care-app`
-- A separate `plant-id-starter` Vercel project may also exist and should be treated as non-canonical unless Gavin decides otherwise.
+- Production: `https://plants.gavinnesom.com`
+- Canonical Vercel project: `plant-care-app`
 
 Required server-side environment variables:
 
@@ -58,22 +60,25 @@ PLANT_ID_FORCE_RATE_LIMIT
 
 - My Garden is private and intended only for Gavin.
 - Public visitors may use temporary identification but cannot access My Garden.
-- My Garden should work on Gavin's MacBook and phone.
-- Future private access should use one fixed owner passphrase, no usernames, no registration, and no account-management interface.
-- The passphrase must be a server-side secret.
-- Unlocking should create a long-lived secure device session.
-- Every private garden read, write, and photograph request must be authorized server-side.
-- Future Plant ID persistence should reuse the existing GavinApps Supabase project with separate Plant ID tables and private photograph storage.
-- Plant ID must not use or modify MemoryEngine tables, API, authentication, or domain model.
-- Garden deletion is recoverable at the data-model level with useful timestamps retained; full trash/restore UI remains deferred.
+- My Garden works across Gavin's devices through one fixed server-side owner passphrase and signed device sessions.
+- Every private Garden read, write, AI action, and photograph request is authorized server-side.
+- Plant ID reuses the GavinApps Supabase project through isolated `plant_id` objects and does not use or modify MemoryEngine data or concepts.
+- Plant Name is the required personal label. Plant Type is Gavin's recorded identity. AI ID is an independent model assessment.
+- Editing Plant Type must not alter AI ID, and reassessment must not silently overwrite a non-empty Plant Type.
+- Saved-photo capacity and per-request AI limits are separate concerns.
+- Identity/reference photos answer what the plant is; observation/problem photos answer what is happening to it.
+- AI tasks use explicit, purpose-appropriate selections rather than the entire saved library.
+- Assessments, care guides, observations, and diagnoses are durable records; plant rows point to current records for efficient display.
+- Normal request handlers do not perform schema DDL. Tracked migrations own schema evolution.
+- Garden deletion is recoverable at the data-model level; full trash/restore UI remains deferred.
 
 ## Known Limitations
 
-- No multi-photo identification, AI reassessment history, full personalized care guide, diagnosis workflow, print/PDF output, search, filtering, or Miscellany integration exists yet.
-- No project-specific browser tests exist yet.
-- AI reassessment history is not user-facing yet; saved plants retain the current/latest useful AI ID only.
-- Local end-to-end identification depends on `npx vercel dev` and valid local secrets.
+- Historical assessments and generated guides persist but do not yet have a dedicated history browser.
+- The existing production record used for Part 4 Preview validation had no suitable problem photo. Its diagnosis used observation text and one deliberately selected healthy reference photo; purpose-aware problem-photo behavior is covered by code and tests.
+- Print/PDF output, search, filtering, restore UI, and Miscellany integration remain deferred.
+- Local end-to-end API behavior requires `npx vercel dev` and valid local secrets.
 
 ## Last Implementation Summary
 
-Part 3 added multiple-photo identification sets, multiple private saved photos per plant, explicit saved-plant AI identification/re-identification, photo removal, and fixed the manual Grow-with-photo save boundary by increasing bounded JSON body handling and correcting empty AI assessment normalization.
+Part 4 adds purpose-aware photos without a saved-library cap, durable identity assessments, personalized care guides, observations, and observation-first problem diagnosis. It also separates the large application shell into workflow modules, moves persistence responsibilities into focused stores, removes runtime DDL, fixes rate-limit counter ordering, and establishes lint, formatting, and browser smoke checks.

@@ -1,4 +1,4 @@
-const { Pool } = require('pg');
+const { Pool } = require("pg");
 
 let pool = null;
 
@@ -22,7 +22,19 @@ function hasDatabaseConfig() {
   return Boolean(process.env.SUPABASE_DB_URL);
 }
 
+function requireDb() {
+  const db = getPool();
+  if (!db) {
+    const error = new Error("Garden database is not configured.");
+    error.statusCode = 503;
+    error.code = "garden_not_configured";
+    throw error;
+  }
+  return db;
+}
+
 module.exports = {
   getPool,
   hasDatabaseConfig,
+  requireDb,
 };

@@ -1,79 +1,63 @@
 # Plant ID Design
 
-## Architecture Overview
+## Architecture
 
-The current app is a Vite React frontend plus Vercel-compatible serverless functions.
+Plant ID is a Vite/React frontend with Vercel serverless routes and private PostgreSQL persistence in the isolated `plant_id` schema.
 
-- The frontend owns file selection, local preview, loading/error state, and result rendering.
-- The identification API route owns request orchestration, image validation, rate limiting, OpenAI calls, and response handling. `server/plant-identification-core.js` owns multipart image extraction, model JSON extraction, and result normalization. `server/rate-limit.js` owns the server-only Supabase rate-limit boundary.
-- Garden APIs own private owner-session checks, Garden reads/writes, and private photo serving. `server/garden-session.js` owns signed session cookies; `server/garden-store.js` owns Garden persistence and photo storage.
-- Individual Garden deletion is a server-authorized soft delete that sets `deleted_at`; normal lists and photo reads exclude deleted records.
+The frontend is split by workflow. `App.jsx` owns only mode and unlock transitions. Identify owns temporary photo selection and its abortable request. Garden owns saved-record state and API transitions; its view module renders Garden, Grow, plant identity, care, observations, and diagnosis.
 
-## Current Data Flow
+Server ownership follows the domain:
 
-1. `src/App.jsx` receives a selected image set through `UploadPanel`.
-2. Client validation checks image type, size, and the 5-photo count limit.
-3. `App` sends `FormData` with the selected image files to `/api/identify-plant`.
-4. `api/identify-plant.js` rate-limits the request before expensive work.
-5. The API uses `server/plant-identification-core.js` to extract multipart images, validate the image set, call OpenAI Responses with all selected images, normalize the model JSON, and return `{ result, warning }`.
-6. `ResultPanel` renders confidence, alternatives, care traits, warnings, and care sections.
-7. If Gavin chooses Add to Garden, the app unlocks My Garden if necessary and opens the Grow form with the current photo set, AI ID, and initial Plant Type.
-8. Saved plants can later add/remove private photos and explicitly request Garden AI identification through `api/garden-identify-plant.js`, which loads selected private photo bytes server-side and persists the current AI ID.
+- identification core: public/saved plant vision and validated identification shape;
+- Garden AI core: structured care and diagnosis generation;
+- plant store: plant metadata and current aggregate;
+- photo store: purpose-aware private image bytes;
+- record store: durable assessments, care guides, observations, and diagnoses;
+- migrations: all schema evolution.
 
-## Module Responsibilities
+## Photo Model
 
-- `src/App.jsx`: current page shell, request state, upload-to-result flow, warning/error handling, debug panel gating.
-- `src/components/UploadPanel.jsx`: file input, drag/drop, preview, client image validation.
-- `src/components/ResultPanel.jsx`: empty, loading, and result states for the current care card.
-- `src/components/TraitBadge.jsx` and `src/components/CareIcon.jsx`: visual care trait rendering.
-- `src/lib/plantSchema.js`: shared frontend constants and trait copy.
-- `api/identify-plant.js`: server boundary for public request orchestration, image-set validation, rate limiting, OpenAI interaction, and response handling.
-- `api/garden-identify-plant.js`: authorized private Garden AI identification/re-identification from selected saved photos.
-- `server/plant-identification-core.js`: testable server-side parsing, OpenAI vision call, and normalization for multipart image input and OpenAI JSON output.
-- `api/garden-session.js`: owner-key unlock and session status.
-- `api/garden-plants.js`: authorized Garden list/create.
-- `api/garden-plants/[id].js`: authorized plant read/edit/add photos/soft delete.
-- `api/garden-photos/[id].js`: authorized private photo bytes and photo removal.
-- `server/garden-session.js`: signed 30-day session cookie creation/verification.
-- `server/garden-store.js`: saved plant/photo persistence.
+A photo belongs to one plant and has a purpose:
 
-## Important Invariants
+- `identity_reference`: evidence for “What plant is this?”;
+- `observation_problem`: evidence for “What is happening to this plant?”;
+- `progress_history`: reserved so a future history feature does not require another role-model rewrite.
 
-- The browser never receives OpenAI, Supabase database, or owner-passphrase secrets.
-- Server-side rate limiting runs before image parsing and before OpenAI calls.
-- Production fails closed if rate limiting is not configured.
-- Plant ID database objects must stay isolated in the `plant_id` schema and must not alter MemoryEngine or Miscellany objects.
-- AI identification must communicate uncertainty and safety caveats.
-- Recorded identity and AI assessment must not silently overwrite each other.
-- Private My Garden access must be authorized server-side for every garden read, write, AI reassessment, and photograph request.
-- AI ID and Plant Type are separate persisted fields; editing Plant Type must not alter AI ID.
-- Saved photos are private and must be served only through authorized API routes.
+There is no five-photo lifetime cap on a saved plant. Five is the maximum selected for one AI request.
 
-## Future Data Model Direction
+Identify/Re-identify accepts only explicitly selected identity/reference photos. Diagnosis prioritizes photos linked to the selected observations and fills any remaining request slots only with deliberately selected identity/reference photos. Care may use deliberately selected identity/reference photos. No AI task receives the entire saved library automatically.
 
-The saved plant record distinguishes:
+Only identity/reference photos can become the plant’s primary list/detail image.
 
-- plant name: required personal label;
-- location: optional place where the individual plant lives;
-- recorded identity: optional accepted identity from AI, label, or manual entry;
-- identity source: AI-accepted, manually entered, or label-confirmed;
-- AI assessment: optional independent best guess from supplied photographs;
-- photographs: zero or more plant images, with Part 3 limiting selected/saved sets to 5 photos for now;
-- care and diagnosis guide: personalized to the individual plant and environment;
-- timestamps and recoverable deletion state.
+## Durable Records
 
-Supabase is the infrastructure, using separate Plant ID schema objects in the existing GavinApps project. MemoryEngine must remain untouched.
+The plant row retains current identity fields for efficient display and points to the latest AI assessment, care guide, and diagnosis. Each generation is also an immutable domain record with a timestamp, structured result, context snapshot, model, schema version, prompt version, and associated photos where applicable.
 
-## Visual Direction
+Observations are distinct dated records. A diagnosis may reference one or more observations and the bounded photo set actually sent. Historical records persist even though Part 4 exposes only current results in the main UI.
 
-The current visual design is a warmer garden shell with off-whites, bark, moss, leaf, and plum accents. My Garden uses a simple tiled gallery rather than search or filtering.
+## Identity Truth
 
-## Error and Empty States
+Plant Type is Gavin’s recorded identity. AI ID is the model’s current assessment. `identity_source` distinguishes `manual`, `ai_accepted`, and `label_confirmed`.
 
-The current app distinguishes missing image, invalid image type, oversized image, unavailable API route, non-JSON API response, low confidence, rate limiting, and server unavailability. Future My Garden work should similarly distinguish empty garden, locked garden, missing photos, no AI assessment, and recoverable deletion.
+AI may initialize an empty Plant Type but never overwrites a non-empty Plant Type during reassessment. A manual Plant Type change changes provenance to manual unless Gavin explicitly selects another truthful source.
 
-## Deliberate Tradeoffs
+## Request Boundaries
 
-- The current API uses a small manual multipart parser to avoid an extra dependency.
-- Current tests target server-side helper behavior before adding browser-specific tooling.
-- Vercel CLI is used for local end-to-end API testing because Vite alone does not serve serverless routes.
+- Public identification is multipart, rate-limited before expensive work, and bounded by member count, member size, and aggregate size.
+- Saved photo persistence uploads one bounded multipart image at a time; metadata JSON remains small.
+- All Garden routes and private photo bytes require the signed owner session.
+- Relevant photo controls are disabled while Garden AI work is active.
+- Temporary identification uses abort and sequence identity so a late result cannot attach to a changed photo set.
+- Normal request paths contain no DDL.
+
+## Rate Limiting
+
+Public fixed-window counters live in `plant_id.rate_limit_buckets`. A request increments and checks its client bucket first. A client already over its own limit returns before the global bucket is incremented. Production fails closed if the database limit boundary is unavailable.
+
+## Safety
+
+Plant identification and diagnosis are advisory. Structured prompts require uncertainty, alternatives, reversible actions, and relevant pet/child/toxicity or urgent safety notes. The UI keeps confidence visible without making normal garden guidance alarmist.
+
+## Part 5 Boundary
+
+Part 5 can read Plant Name, Plant Type/AI ID, current reference photos, current care guide, selected observations, and current diagnosis from the same plant aggregate. Print/PDF must not create a second care or diagnosis model.

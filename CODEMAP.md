@@ -3,79 +3,88 @@
 ## Start Here
 
 - Product direction: `README.md`
-- Current status and verified commands: `PROJECT_STATUS.md`
+- Current verified state: `PROJECT_STATUS.md`
 - Architecture and invariants: `DESIGN.md`
-- Active handoff: `CHATGPT_HANDOFF.md`
-- Main UI flow: `src/App.jsx`
-- Serverless identification API: `api/identify-plant.js`
+- Active coordination: `CHATGPT_HANDOFF.md`
+- App composition: `src/App.jsx`
+- Identify workflow: `src/features/identify/IdentifyExperience.jsx`
+- Garden workflow: `src/features/garden/GardenExperience.jsx`
 
-## Primary Flow
+## Primary Flows
 
 ```mermaid
 flowchart TD
-  A[UploadPanel builds a photo set] --> B[App validates files]
-  B --> C[FormData POST to /api/identify-plant]
-  C --> D[API checks rate limits]
-  D --> E[API parses multipart images]
-  E --> F[OpenAI Responses vision call]
-  F --> G[Extract and validate plant JSON]
-  G --> H[ResultPanel renders care card]
-  H --> I[Add to Garden opens unlock/Grow flow]
-  I --> J[Authorized Garden API saves plant/photo]
+  A[Select up to 5 temporary photos] --> B[Public Identify API]
+  B --> C[Rate limit then OpenAI vision]
+  C --> D[Validated result and provenance]
+  D --> E[Optional Grow form]
+  E --> F[Create plant metadata]
+  F --> G[Upload each reference photo as multipart]
+  G --> H[Persist carried AI assessment]
+
+  I[Saved plant] --> J[Add reference photos]
+  I --> K[Add observation and problem photos]
+  J --> L[Explicit Identify or Care action]
+  K --> M[Explicit Diagnose action]
+  L --> N[Durable assessment or care guide]
+  M --> O[Durable diagnosis linked to observations]
 ```
 
-## Repository Map
+## Frontend
 
-| Path | Responsibility |
-|---|---|
-| `README.md` | Current purpose, approved product direction, setup, Vercel, rate limiting, safety |
-| `AGENTS.md` | Project-specific Codex rules and commands |
-| `PROJECT.md` | Vision, current milestone, users, principles, non-goals |
-| `DESIGN.md` | Architecture, data flow, invariants, future model direction |
-| `PROJECT_STATUS.md` | Durable verified state and limitations |
-| `TODO.md` | Deferred work and decisions |
-| `CHATGPT_HANDOFF.md` | Ignored local ChatGPT-to-Codex coordination scope and outcome |
-| `src/App.jsx` | Page shell and upload-to-result state machine |
-| `src/components/UploadPanel.jsx` | File input, drag/drop, client image validation, preview |
-| `src/components/ResultPanel.jsx` | Loading, empty, warning, result, alternatives, care details |
-| `src/components/TraitBadge.jsx` | Care enum display metadata |
-| `src/components/CareIcon.jsx` | Inline SVG care icons |
-| `src/lib/plantSchema.js` | Frontend schema constants and trait copy |
-| `src/index.css` | Tailwind import and app color variables |
-| `api/identify-plant.js` | Serverless API orchestration, rate limiting, OpenAI call, response |
-| `api/garden-session.js` | Owner unlock and Garden session status |
-| `api/garden-plants.js` | Authorized Garden list/create |
-| `api/garden-plants/[id].js` | Authorized individual plant read/edit/add photos/soft delete |
-| `api/garden-photos/[id].js` | Authorized private photo bytes and soft photo removal |
-| `api/garden-identify-plant.js` | Authorized saved-plant AI identification/re-identification from private photo bytes |
-| `server/plant-identification-core.js` | Multipart image-set extraction, OpenAI vision call, model JSON extraction, normalized result validation |
-| `server/db.js` | Shared Postgres pool |
-| `server/garden-session.js` | Server-only owner key and signed 30-day session cookie boundary |
-| `server/garden-store.js` | Garden plant and private photo persistence |
-| `server/rate-limit.js` | Server-only Supabase-backed rate-limit boundary |
-| `supabase/migrations/202608200001_plant_id_rate_limits.sql` | Isolated Plant ID schema, table, cleanup index, and atomic rate-limit function |
-| `supabase/migrations/202608200002_plant_id_private_garden.sql` | Isolated Garden plant and photo tables |
-| `tests/identify-plant.test.cjs` | Unit tests for identification helper behavior |
-| `tests/garden.test.cjs` | Unit tests for Garden session and storage helper behavior |
+| Path                                           | Responsibility                                                                   |
+| ---------------------------------------------- | -------------------------------------------------------------------------------- |
+| `src/App.jsx`                                  | Identify/Garden mode and owner unlock transition                                 |
+| `src/features/identify/IdentifyExperience.jsx` | Temporary reference-photo selection, request identity/abort handling, and result |
+| `src/features/garden/GardenExperience.jsx`     | Garden, Grow, and plant-record state plus API transitions                        |
+| `src/features/garden/GardenViews.jsx`          | Garden list, forms, purpose-separated photos, care, observations, and diagnosis  |
+| `src/components/AppChrome.jsx`                 | Shared title, mode control, error, and unlock UI                                 |
+| `src/components/UploadPanel.jsx`               | Public upload surface and browser file validation                                |
+| `src/components/ResultPanel.jsx`               | Public identification result and uncertainty UI                                  |
+| `src/lib/api.js`                               | JSON API and one-photo multipart helpers                                         |
+| `src/lib/photos.js`                            | Local preview lifecycle and shared file validation                               |
 
-## How To Change
+## Server
 
-| If you want to... | Start in... | Then inspect... | Verify with... |
-|---|---|---|---|
-| Change current upload validation | `src/components/UploadPanel.jsx` | `src/lib/plantSchema.js`, `api/identify-plant.js`, `server/plant-identification-core.js` | `npm test`, `npm run build` |
-| Change result fields or care sections | `server/plant-identification-core.js` | `api/identify-plant.js`, `src/components/ResultPanel.jsx`, `src/lib/plantSchema.js` | `npm test`, `npm run build` |
-| Change OpenAI prompt or model behavior | `api/identify-plant.js` | `README.md`, `DESIGN.md` | `npm test`, manual `npx vercel dev` check with credentials |
-| Change rate limiting | `server/rate-limit.js` | `api/identify-plant.js`, `supabase/migrations/` | `npm test`, `npm run build`, Vercel preview POST |
-| Change My Garden persistence or saved-photo behavior | `server/garden-store.js` | `api/garden-plants.js`, `api/garden-plants/[id].js`, `api/garden-photos/[id].js`, `api/garden-identify-plant.js`, Supabase migrations | `npm test`, `npm run build`, preview Garden smoke |
-| Add project-specific browser tests | new `playwright.config.*` | `tests/e2e/`, README commands | project Playwright command |
-| Update deployment setup | `README.md` | `PROJECT_STATUS.md`, `.env.example` | `npm run build` and Vercel preview checks |
+| Path                                       | Responsibility                                              |
+| ------------------------------------------ | ----------------------------------------------------------- |
+| `api/identify-plant.js`                    | Public, rate-limited identification orchestration           |
+| `api/garden-identify-plant.js`             | Authorized identification from selected reference photos    |
+| `api/garden-plants.js`                     | Authorized plant list/create metadata                       |
+| `api/garden-plants/[id].js`                | Authorized plant read/edit/soft delete                      |
+| `api/garden-plants/[id]/photos.js`         | Bounded one-photo multipart persistence                     |
+| `api/garden-plants/[id]/ai-assessments.js` | Persist a carried public assessment                         |
+| `api/garden-plants/[id]/care-guide.js`     | Explicit care-guide generation/persistence                  |
+| `api/garden-plants/[id]/observations.js`   | Dated observation persistence                               |
+| `api/garden-plants/[id]/diagnoses.js`      | Observation-first diagnosis generation/persistence          |
+| `api/garden-photos/[id].js`                | Authorized private photo bytes and soft removal             |
+| `server/plant-identification-core.js`      | Multipart parsing, vision request, and result validation    |
+| `server/garden-ai-core.js`                 | Strict structured care and diagnosis calls                  |
+| `server/garden-store.js`                   | Plant metadata and aggregate serialization                  |
+| `server/garden-photo-store.js`             | Purpose-aware private photo persistence                     |
+| `server/garden-record-store.js`            | Assessment, care, observation, and diagnosis records        |
+| `server/garden-validation.js`              | Garden text, purpose, provenance, photo, and request limits |
+| `server/garden-session.js`                 | Owner-key and signed-session boundary                       |
+| `server/rate-limit.js`                     | Supabase-backed public request limit boundary               |
 
-## Verification Entry Points
+## Persistence
+
+- `202608200001_plant_id_rate_limits.sql`: isolated fixed-window counters.
+- `202608200002_plant_id_private_garden.sql`: private plants/photos.
+- `202608200003_plant_id_plant_name_polish.sql`: Plant Name migration.
+- `202608200004_plant_id_part_4_records.sql`: photo purposes, durable domain records, current pointers, and corrected client/global accounting.
+
+Normal request code contains no schema DDL.
+
+## Verification
 
 ```bash
 npm test
+npm run lint
+npm run format:check
 npm run build
-npx vercel dev
+npm run test:e2e
+git diff --check
 ```
 
-`npx vercel dev` requires local environment variables for real identification and serves the serverless API route. `npm run dev` is frontend-only.
+Use `npx vercel dev` for local serverless API behavior. Vercel Preview protection can be checked with `npx vercel curl`; set `PLAYWRIGHT_BASE_URL` and `PLAYWRIGHT_VERIFY_AUTH=1` for the unauthenticated API assertion against production.

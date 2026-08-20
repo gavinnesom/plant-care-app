@@ -67,7 +67,9 @@ The printable version should be a deliberately condensed, dense, two-sided care 
 
 The app includes a small inline SVG icon system for care traits such as sun exposure, water needs, soil type, pet safety, California suitability, and beginner friendliness.
 
-Part 3 adds multiple-photo identification and saved-plant reassessment. The private My Garden foundation includes owner unlock, saved individual plants, the Grow form with zero to five optional photos, private saved photos, individual plant pages that can add/remove photos, explicit AI Identify/Re-identify actions, and individual-plant soft delete. AI reassessment history, full care-guide personalization, diagnosis workflows, and print/PDF remain later work.
+Part 4 turns each saved plant into a durable record. A plant can accumulate private photographs over time; each photo has an identity/reference or observation/problem purpose. Gavin selects at most 5 reference photos for one identification request, while saved-photo storage has no matching lifetime cap. Explicit AI actions create durable identification assessments, personalized care guides, and observation-based diagnoses with their input context and generation metadata preserved.
+
+Observations are dated records with optional problem photos. Diagnosis primarily uses the photos attached to selected observations, plus recorded identity, care guidance, and observation text. Reference photos can be selected deliberately for comparison, but the complete photo library is never sent blindly.
 
 ## Tech Stack
 
@@ -76,6 +78,8 @@ Part 3 adds multiple-photo identification and saved-plant reassessment. The priv
 - Tailwind CSS
 - Vercel-style serverless function in `api/identify-plant.js`
 - OpenAI Responses API
+- PostgreSQL/Supabase persistence in the isolated `plant_id` schema
+- ESLint, Prettier, Node test runner, and Playwright smoke tests
 
 ## Local Setup
 
@@ -132,6 +136,16 @@ Do not use plain `npm run dev` when testing identification. It only starts the V
 The app is only working end-to-end when clicking `Identify with AI` sends a multipart POST to `/api/identify-plant` with the selected photo set and the result panel is populated from the API response.
 
 For release verification, a real production `POST /api/identify-plant` with plant images is required unless Gavin explicitly says otherwise. Part 3 and later releases should include at least one multi-photo production identification.
+
+Project checks:
+
+```bash
+npm test
+npm run lint
+npm run format:check
+npm run build
+npm run test:e2e
+```
 
 ## Vercel Deployment Notes
 
@@ -193,9 +207,15 @@ My Garden is private and uses a server-issued 30-day session cookie after the ow
 
 Saved plants are individual records. **AI ID** stores the AI's latest useful guess; **Plant Type** is Gavin's editable recorded identity for the saved plant. Editing Plant Type does not change AI ID, and AI reassessment does not overwrite an already-filled Plant Type.
 
+AI assessments, care-guide generations, observations, and diagnoses are separate durable records. The plant row only points to the current assessment/guide/diagnosis. Schema changes live in tracked migrations and are never performed by normal request handlers.
+
 ## Important Files
 
-- `src/App.jsx`: main flow and state handling
+- `src/App.jsx`: small application shell and Identify/Garden mode transition
+- `src/features/identify/IdentifyExperience.jsx`: public photo-set identification flow
+- `src/features/garden/GardenExperience.jsx`: private Garden state and API transitions
+- `src/features/garden/GardenViews.jsx`: Garden, Grow, plant, care, observation, and diagnosis views
+- `src/lib/api.js`: shared browser API response and multipart upload helpers
 - `src/components/UploadPanel.jsx`: upload, drag/drop, validation hints, preview
 - `src/components/ResultPanel.jsx`: loading, empty, warning, result, alternatives, details
 - `src/components/CareIcon.jsx`: custom inline SVG icon system
@@ -204,14 +224,23 @@ Saved plants are individual records. **AI ID** stores the AI's latest useful gue
 - `api/identify-plant.js`: Vercel-compatible OpenAI vision endpoint
 - `api/garden-session.js`: owner unlock and session status endpoint
 - `api/garden-plants.js`: authorized Garden list/create endpoint
-- `api/garden-plants/[id].js`: authorized individual plant read/edit/add-photo/soft-delete endpoint
+- `api/garden-plants/[id].js`: authorized individual plant read/edit/soft-delete endpoint
+- `api/garden-plants/[id]/photos.js`: one-photo multipart persistence endpoint
+- `api/garden-plants/[id]/care-guide.js`: explicit personalized care generation
+- `api/garden-plants/[id]/observations.js`: dated observation persistence
+- `api/garden-plants/[id]/diagnoses.js`: explicit observation-based problem diagnosis
 - `api/garden-photos/[id].js`: authorized private photo read/remove endpoint
 - `api/garden-identify-plant.js`: authorized saved-plant AI identification/re-identification endpoint
 - `server/rate-limit.js`: server-only Supabase-backed rate-limit boundary
 - `server/garden-session.js`: signed 30-day Garden session cookie helpers
-- `server/garden-store.js`: Plant ID Garden persistence and private photo storage
+- `server/garden-store.js`: saved-plant metadata persistence and aggregate serialization
+- `server/garden-photo-store.js`: purpose-aware private photo persistence
+- `server/garden-record-store.js`: AI assessment, care, observation, and diagnosis persistence
+- `server/garden-ai-core.js`: structured care-guide and diagnosis AI calls
+- `server/garden-validation.js`: shared Garden boundary validation and limits
 - `supabase/migrations/202608200001_plant_id_rate_limits.sql`: isolated Plant ID rate-limit schema and function
 - `supabase/migrations/202608200002_plant_id_private_garden.sql`: isolated Garden plant/photo schema
+- `supabase/migrations/202608200004_plant_id_part_4_records.sql`: purpose-aware photos, durable records, and rate-limit correction
 
 ## Safety Note
 

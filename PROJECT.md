@@ -16,11 +16,11 @@ The app began as a polished one-photo plant-identification demo. It now has a wo
 
 ## Current Milestone
 
-The current milestone is Part 3: multiple-photo identification and saved-plant AI reassessment while preserving Gavin's authority over Plant Type.
+Part 4 makes each saved plant a useful long-form record: durable AI identity assessments, purpose-aware photos, personalized care guides, dated observations, and explicit observation-based problem diagnosis.
 
 ## Current Non-Goals
 
-This milestone does not implement long-form personalized care guides, problem diagnosis workflows, print/PDF output, search, filtering, conventional multi-user accounts, or Miscellany integration.
+This milestone does not implement print/PDF output, search, filtering, conventional multi-user accounts, a full history browser, or Miscellany integration.
 
 ## Product Principles
 
@@ -30,6 +30,8 @@ This milestone does not implement long-form personalized care guides, problem di
 - Recorded identity and AI assessment must remain visibly distinct.
 - Manual or nursery-supplied identity must not block requesting an AI assessment.
 - Private garden reads, writes, AI reassessment, and photograph requests must be authorized server-side.
+- Saved-photo capacity and per-request AI selection are separate limits.
+- Identity/reference photos and observation/problem photos are not interchangeable AI evidence.
 
 ## Approved Future Direction
 
@@ -40,4 +42,5 @@ My Garden is private and intended only for Gavin. It uses one fixed owner passph
 - Temporary multi-photo identification remains useful and safe.
 - My Garden keeps Plant Type and AI ID visibly separate.
 - Saved plants can store multiple private photos and request explicit AI reassessment.
-- The next implementation pass can start from documented architecture, commands, risks, and decisions.
+- Care guides, observations, and diagnoses persist separately with useful provenance.
+- Part 5 can render the current plant record without inventing a second data model.
