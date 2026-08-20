@@ -34,7 +34,7 @@ flowchart TD
 | `DESIGN.md` | Architecture, data flow, invariants, future model direction |
 | `PROJECT_STATUS.md` | Durable verified state and limitations |
 | `TODO.md` | Deferred work and decisions |
-| `CHATGPT_HANDOFF.md` | Active ChatGPT-to-Codex scope and outcome |
+| `CHATGPT_HANDOFF.md` | Ignored local ChatGPT-to-Codex coordination scope and outcome |
 | `src/App.jsx` | Page shell and upload-to-result state machine |
 | `src/components/UploadPanel.jsx` | File input, drag/drop, client image validation, preview |
 | `src/components/ResultPanel.jsx` | Loading, empty, warning, result, alternatives, care details |
@@ -65,7 +65,7 @@ flowchart TD
 | Change result fields or care sections | `server/plant-identification-core.js` | `api/identify-plant.js`, `src/components/ResultPanel.jsx`, `src/lib/plantSchema.js` | `npm test`, `npm run build` |
 | Change OpenAI prompt or model behavior | `api/identify-plant.js` | `README.md`, `DESIGN.md` | `npm test`, manual `npx vercel dev` check with credentials |
 | Change rate limiting | `server/rate-limit.js` | `api/identify-plant.js`, `supabase/migrations/` | `npm test`, `npm run build`, Vercel preview POST |
-| Change My Garden persistence | `server/garden-store.js` | `api/garden-plants.js`, `api/garden-plants/[id].js`, `api/garden-photos/[id].js`, Supabase migrations | `npm test`, `npm run build`, preview Garden smoke |
+| Change My Garden persistence or saved-photo behavior | `server/garden-store.js` | `api/garden-plants.js`, `api/garden-plants/[id].js`, `api/garden-photos/[id].js`, Supabase migrations | `npm test`, `npm run build`, preview Garden smoke |
 | Add project-specific browser tests | new `playwright.config.*` | `tests/e2e/`, README commands | project Playwright command |
 | Update deployment setup | `README.md` | `PROJECT_STATUS.md`, `.env.example` | `npm run build` and Vercel preview checks |
 

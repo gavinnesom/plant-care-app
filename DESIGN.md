@@ -50,7 +50,7 @@ The current app is a Vite React frontend plus Vercel-compatible serverless funct
 
 The saved plant record distinguishes:
 
-- garden name: required personal label;
+- plant name: required personal label;
 - location: optional place where the individual plant lives;
 - recorded identity: optional accepted identity from AI, label, or manual entry;
 - identity source: AI-accepted, manually entered, or label-confirmed;

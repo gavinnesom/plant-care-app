@@ -1,7 +1,15 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { createSessionCookie, validateOwnerKey, verifySession } = require('../server/garden-session');
-const { normalizeAiAssessment, normalizePhoto } = require('../server/garden-store');
+const {
+  UNLOCK_ATTEMPT_LIMIT,
+  checkOwnerUnlockRateLimit,
+  clearOwnerUnlockAttemptsForTests,
+  createSessionCookie,
+  recordFailedOwnerUnlock,
+  validateOwnerKey,
+  verifySession,
+} = require('../server/garden-session');
+const { createPlant, normalizeAiAssessment, normalizePhoto, updatePlant } = require('../server/garden-store');
 
 function withEnv(nextEnv, fn) {
   const previous = {};
@@ -101,4 +109,24 @@ test('photo normalization accepts private image bytes without public URLs', () =
   assert.equal(photo.bytes.toString(), 'image-bytes');
   assert.equal(photo.altText, 'Patio plant');
   assert.equal(photo.isPrimary, true);
+});
+
+test('saved plants require Plant Name terminology before database work', async () => {
+  await assert.rejects(() => createPlant({ plantName: '   ' }), /Plant Name is required/);
+  await assert.rejects(() => updatePlant('plant-id', { plantName: '   ' }), /Plant Name is required/);
+});
+
+test('owner unlock throttles repeated bad guesses by request source', () => {
+  clearOwnerUnlockAttemptsForTests();
+  const req = { headers: { 'x-forwarded-for': '203.0.113.10' } };
+
+  for (let index = 0; index < UNLOCK_ATTEMPT_LIMIT; index += 1) {
+    assert.equal(checkOwnerUnlockRateLimit(req).allowed, true);
+    recordFailedOwnerUnlock(req);
+  }
+
+  const limited = checkOwnerUnlockRateLimit(req);
+  assert.equal(limited.allowed, false);
+  assert.ok(limited.retryAfterSeconds > 0);
+  clearOwnerUnlockAttemptsForTests();
 });

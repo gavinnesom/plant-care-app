@@ -24,15 +24,15 @@ My Garden is a persistent collection of individual plants, not merely a list of 
 There are two valid ways to create a saved plant:
 
 1. After adding one or more photographs, select **Add to My Garden**. AI identification may happen before or after the plant is saved.
-2. Select **Add Plant** directly from My Garden, enter its required garden name, and add other information or photographs later.
+2. Select **Grow** directly from My Garden, enter its required plant name, and add other information or one photograph later.
 
-A saved plant requires only a garden name. Search and filtering are deferred until the collection becomes large enough to justify them; for Gavin's current collection of fewer than 25 plants, a simple browsable card list or grid is enough.
+A saved plant requires only a plant name. Search and filtering are deferred until the collection becomes large enough to justify them; for Gavin's current collection of fewer than 25 plants, a simple browsable card list or grid is enough.
 
 ### Plant Records
 
 Keep these plant-record concepts distinct:
 
-- **Garden name — required:** Gavin's personal label, such as `Big Green` or `Orange Tree`.
+- **Plant Name — required:** Gavin's personal label, such as `Big Green` or `Orange Tree`.
 - **Location — optional:** where the individual plant lives, such as `Patio` or `By the shed`.
 - **Recorded identity — optional:** the accepted plant identity, which may come from an AI result, nursery label, or manual entry.
 - **Identity source:** indicates whether the recorded identity was AI-accepted, manually entered, or confirmed from a label.
@@ -67,8 +67,7 @@ The printable version should be a deliberately condensed, dense, two-sided care 
 
 The app includes a small inline SVG icon system for care traits such as sun exposure, water needs, soil type, pet safety, California suitability, and beginner friendliness.
 
-The current app is still a one-photo identification flow. My Garden, multi-photo identification sets, saved plant records, personalized per-plant histories, and printable care sheets are planned product direction, not current implementation.
-Part 2 adds the private My Garden foundation: owner unlock, saved individual plants, the Grow form, private saved photos, and individual plant pages. Multi-photo identification, reassessment history, full care-guide personalization, diagnosis workflows, and print/PDF remain later work.
+The current app still has a one-photo identification flow. Part 2 adds the private My Garden foundation: owner unlock, saved individual plants, the Grow form with one optional manual photo, private saved photos, and individual plant pages that can add or replace one saved photo. Multi-photo identification, reassessment history, full care-guide personalization, diagnosis workflows, and print/PDF remain later work.
 
 ## Tech Stack
 
@@ -188,7 +187,7 @@ Recommended Vercel setup:
 
 ## My Garden
 
-My Garden is private and uses a server-issued 30-day session cookie after the owner key is accepted. Garden records and photos are served only through authorized API routes. Photos are stored privately in Plant ID-owned Supabase/Postgres objects rather than exposed as public URLs.
+My Garden is private and uses a server-issued 30-day session cookie after the owner key is accepted. Repeated failed unlock attempts are throttled server-side. Garden records and photos are served only through authorized API routes. Photos are stored privately in Plant ID-owned Supabase/Postgres objects rather than exposed as public URLs.
 
 Saved plants are individual records. **AI ID** stores the AI's guess; **Plant Type** is Gavin's editable recorded identity for the saved plant. Editing Plant Type does not change AI ID.
 

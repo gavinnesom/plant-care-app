@@ -3,6 +3,7 @@ const { getPool } = require('./db');
 
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+let plantNameColumnReady = false;
 
 function requireDb() {
   const db = getPool();
@@ -72,11 +73,39 @@ function normalizePhoto(input) {
   };
 }
 
+async function ensurePlantNameColumn(db) {
+  if (plantNameColumnReady) return;
+  await db.query(`
+    do $$
+    begin
+      if exists (
+        select 1 from information_schema.columns
+        where table_schema = 'plant_id' and table_name = 'garden_plants' and column_name = 'garden_name'
+      ) and not exists (
+        select 1 from information_schema.columns
+        where table_schema = 'plant_id' and table_name = 'garden_plants' and column_name = 'plant_name'
+      ) then
+        alter table plant_id.garden_plants rename column garden_name to plant_name;
+      end if;
+    end $$;
+
+    alter table plant_id.garden_plants
+      drop constraint if exists garden_plants_name_check;
+
+    alter table plant_id.garden_plants
+      drop constraint if exists garden_plants_plant_name_check;
+
+    alter table plant_id.garden_plants
+      add constraint garden_plants_plant_name_check check (length(trim(plant_name)) > 0);
+  `);
+  plantNameColumnReady = true;
+}
+
 function serializePlant(row) {
   if (!row) return null;
   return {
     id: row.id,
-    gardenName: row.garden_name,
+    plantName: row.plant_name,
     location: row.location || '',
     plantType: row.plant_type || '',
     aiAssessmentState: row.ai_assessment_state,
@@ -92,6 +121,7 @@ function serializePlant(row) {
 
 async function listPlants() {
   const db = requireDb();
+  await ensurePlantNameColumn(db);
   const { rows } = await db.query(
     `select p.*,
       (select ph.id from plant_id.garden_photos ph where ph.plant_id = p.id and ph.deleted_at is null order by ph.is_primary desc, ph.created_at asc limit 1) as primary_photo_id
@@ -104,6 +134,7 @@ async function listPlants() {
 
 async function getPlant(id) {
   const db = requireDb();
+  await ensurePlantNameColumn(db);
   const { rows } = await db.query(
     `select p.*,
       (select ph.id from plant_id.garden_photos ph where ph.plant_id = p.id and ph.deleted_at is null order by ph.is_primary desc, ph.created_at asc limit 1) as primary_photo_id
@@ -127,10 +158,10 @@ async function savePhoto(client, plantId, photo) {
   );
 }
 
-async function createPlant(input) {
-  const gardenName = cleanText(input.gardenName, 120);
-  if (!gardenName) {
-    const error = new Error('Garden Name is required.');
+async function createPlant(input = {}) {
+  const plantName = cleanText(input.plantName || input.gardenName, 120);
+  if (!plantName) {
+    const error = new Error('Plant Name is required.');
     error.statusCode = 400;
     throw error;
   }
@@ -140,19 +171,20 @@ async function createPlant(input) {
   const photo = normalizePhoto(input.photo);
   const id = crypto.randomUUID();
   const db = requireDb();
+  await ensurePlantNameColumn(db);
   const client = await db.connect();
 
   try {
     await client.query('begin');
     await client.query(
       `insert into plant_id.garden_plants (
-        id, garden_name, location, plant_type, identity_source,
+        id, plant_name, location, plant_type, identity_source,
         ai_assessment_state, ai_common_name, ai_scientific_name, ai_confidence, ai_raw
       )
       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         id,
-        gardenName,
+        plantName,
         cleanText(input.location, 160),
         plantType,
         input.identitySource === 'manual' ? 'manual' : ai.state === 'ai_guess' ? 'ai_initial' : 'manual',
@@ -175,31 +207,50 @@ async function createPlant(input) {
   return getPlant(id);
 }
 
-async function updatePlant(id, input) {
-  const gardenName = cleanText(input.gardenName, 120);
-  if (!gardenName) {
-    const error = new Error('Garden Name is required.');
+async function updatePlant(id, input = {}) {
+  const plantName = cleanText(input.plantName || input.gardenName, 120);
+  if (!plantName) {
+    const error = new Error('Plant Name is required.');
     error.statusCode = 400;
     throw error;
   }
 
+  const photo = normalizePhoto(input.photo);
   const db = requireDb();
-  const { rowCount } = await db.query(
-    `update plant_id.garden_plants
-     set garden_name = $2,
-       location = $3,
-       plant_type = $4,
-       identity_source = case when plant_type is distinct from $4 then 'manual' else identity_source end,
-       updated_at = now()
-     where id = $1 and deleted_at is null`,
-    [id, gardenName, cleanText(input.location, 160), cleanText(input.plantType, 180)]
-  );
-  if (!rowCount) return null;
+  await ensurePlantNameColumn(db);
+  const client = await db.connect();
+
+  try {
+    await client.query('begin');
+    const { rowCount } = await client.query(
+      `update plant_id.garden_plants
+       set plant_name = $2,
+         location = $3,
+         plant_type = $4,
+         identity_source = case when plant_type is distinct from $4 then 'manual' else identity_source end,
+         updated_at = now()
+       where id = $1 and deleted_at is null`,
+      [id, plantName, cleanText(input.location, 160), cleanText(input.plantType, 180)]
+    );
+    if (!rowCount) {
+      await client.query('rollback');
+      return null;
+    }
+    await savePhoto(client, id, photo);
+    await client.query('commit');
+  } catch (error) {
+    await client.query('rollback');
+    throw error;
+  } finally {
+    client.release();
+  }
+
   return getPlant(id);
 }
 
 async function getPhoto(photoId) {
   const db = requireDb();
+  await ensurePlantNameColumn(db);
   const { rows } = await db.query(
     `select ph.mime_type, ph.image_bytes
      from plant_id.garden_photos ph
