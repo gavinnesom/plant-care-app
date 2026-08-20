@@ -71,6 +71,8 @@ Part 4 turns each saved plant into a durable record. A plant can accumulate priv
 
 Observations are dated records with optional problem photos. Diagnosis primarily uses the photos attached to selected observations, plus recorded identity, care guidance, and observation text. Reference photos can be selected deliberately for comparison, but the complete photo library is never sent blindly.
 
+Part 5 presents the saved plant as one accessible vertical record: Identity, Care Guide, Problems/Observations, then Diagnosis/Remediation. Plants moved to Recently deleted can be restored with their photos and records intact. The Print action renders the same aggregate as a deliberately condensed two-page Letter portrait care sheet for double-sided printing and lamination.
+
 ## Tech Stack
 
 - Vite
@@ -135,7 +137,7 @@ Do not use plain `npm run dev` when testing identification. It only starts the V
 
 The app is only working end-to-end when clicking `Identify with AI` sends a multipart POST to `/api/identify-plant` with the selected photo set and the result panel is populated from the API response.
 
-For release verification, a real production `POST /api/identify-plant` with plant images is required unless Gavin explicitly says otherwise. Part 3 and later releases should include at least one multi-photo production identification.
+Release verification should exercise behavior changed by the release. Do not repeat paid AI requests or broad regression checks when those paths are unchanged and already verified.
 
 Project checks:
 
@@ -215,6 +217,7 @@ AI assessments, care-guide generations, observations, and diagnoses are separate
 - `src/features/identify/IdentifyExperience.jsx`: public photo-set identification flow
 - `src/features/garden/GardenExperience.jsx`: private Garden state and API transitions
 - `src/features/garden/GardenViews.jsx`: Garden, Grow, plant, care, observation, and diagnosis views
+- `src/features/garden/PlantPrintView.jsx`: condensed two-page printable plant record
 - `src/lib/api.js`: shared browser API response and multipart upload helpers
 - `src/components/UploadPanel.jsx`: upload, drag/drop, validation hints, preview
 - `src/components/ResultPanel.jsx`: loading, empty, warning, result, alternatives, details
@@ -223,8 +226,8 @@ AI assessments, care-guide generations, observations, and diagnoses are separate
 - `src/lib/plantSchema.js`: shared frontend schema constants and trait copy
 - `api/identify-plant.js`: Vercel-compatible OpenAI vision endpoint
 - `api/garden-session.js`: owner unlock and session status endpoint
-- `api/garden-plants.js`: authorized Garden list/create endpoint
-- `api/garden-plants/[id].js`: authorized individual plant read/edit/soft-delete endpoint
+- `api/garden-plants.js`: authorized active/deleted Garden list and create endpoint
+- `api/garden-plants/[id].js`: authorized individual plant read/edit/soft-delete/restore endpoint
 - `api/garden-plants/[id]/photos.js`: one-photo multipart persistence endpoint
 - `api/garden-plants/[id]/care-guide.js`: explicit personalized care generation
 - `api/garden-plants/[id]/observations.js`: dated observation persistence

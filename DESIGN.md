@@ -58,6 +58,12 @@ Public fixed-window counters live in `plant_id.rate_limit_buckets`. A request in
 
 Plant identification and diagnosis are advisory. Structured prompts require uncertainty, alternatives, reversible actions, and relevant pet/child/toxicity or urgent safety notes. The UI keeps confidence visible without making normal garden guidance alarmist.
 
-## Part 5 Boundary
+## Plant Record and Print
 
-Part 5 can read Plant Name, Plant Type/AI ID, current reference photos, current care guide, selected observations, and current diagnosis from the same plant aggregate. Print/PDF must not create a second care or diagnosis model.
+The saved-plant screen is one vertical record ordered as Identity, Care Guide, Problems/Observations, then Diagnosis/Remediation. Section styling may differ, but reading order and semantics remain stable across desktop and mobile.
+
+The print view reads Plant Name, Plant Type/AI ID, current reference photos, current care guide, observations, and current diagnosis from the same plant aggregate. It renders a condensed two-page Letter portrait care sheet: identity and care on the front, problems and actions on the back. It does not create a second care or diagnosis model.
+
+## Recovery
+
+Plant deletion is a soft delete. Recently deleted records are listed separately and can be restored without changing their photos or durable records. Permanent deletion is intentionally not exposed in the current UI.

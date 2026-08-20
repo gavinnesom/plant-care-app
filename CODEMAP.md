@@ -28,6 +28,10 @@ flowchart TD
   K --> M[Explicit Diagnose action]
   L --> N[Durable assessment or care guide]
   M --> O[Durable diagnosis linked to observations]
+  I --> P[Print current aggregate as two-page care sheet]
+  I --> Q[Soft delete]
+  Q --> R[Recently deleted]
+  R --> S[Restore plant and associated records]
 ```
 
 ## Frontend
@@ -38,6 +42,7 @@ flowchart TD
 | `src/features/identify/IdentifyExperience.jsx` | Temporary reference-photo selection, request identity/abort handling, and result |
 | `src/features/garden/GardenExperience.jsx`     | Garden, Grow, and plant-record state plus API transitions                        |
 | `src/features/garden/GardenViews.jsx`          | Garden list, forms, purpose-separated photos, care, observations, and diagnosis  |
+| `src/features/garden/PlantPrintView.jsx`       | Two-page print-only care sheet derived from the current plant aggregate          |
 | `src/components/AppChrome.jsx`                 | Shared title, mode control, error, and unlock UI                                 |
 | `src/components/UploadPanel.jsx`               | Public upload surface and browser file validation                                |
 | `src/components/ResultPanel.jsx`               | Public identification result and uncertainty UI                                  |
@@ -50,8 +55,8 @@ flowchart TD
 | ------------------------------------------ | ----------------------------------------------------------- |
 | `api/identify-plant.js`                    | Public, rate-limited identification orchestration           |
 | `api/garden-identify-plant.js`             | Authorized identification from selected reference photos    |
-| `api/garden-plants.js`                     | Authorized plant list/create metadata                       |
-| `api/garden-plants/[id].js`                | Authorized plant read/edit/soft delete                      |
+| `api/garden-plants.js`                     | Authorized active/deleted plant list and create metadata    |
+| `api/garden-plants/[id].js`                | Authorized plant read/edit/soft delete/restore              |
 | `api/garden-plants/[id]/photos.js`         | Bounded one-photo multipart persistence                     |
 | `api/garden-plants/[id]/ai-assessments.js` | Persist a carried public assessment                         |
 | `api/garden-plants/[id]/care-guide.js`     | Explicit care-guide generation/persistence                  |
@@ -78,13 +83,6 @@ Normal request code contains no schema DDL.
 
 ## Verification
 
-```bash
-npm test
-npm run lint
-npm run format:check
-npm run build
-npm run test:e2e
-git diff --check
-```
+Choose checks that cover the changed surface. Part 5 has focused Node and Playwright coverage for restore, vertical order, accessibility, responsive overflow, and the two-page print layout; use broad regression suites only when shared behavior changes.
 
 Use `npx vercel dev` for local serverless API behavior. Vercel Preview protection can be checked with `npx vercel curl`; set `PLAYWRIGHT_BASE_URL` and `PLAYWRIGHT_VERIFY_AUTH=1` for the unauthenticated API assertion against production.

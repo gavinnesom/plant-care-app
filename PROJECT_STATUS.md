@@ -2,7 +2,7 @@
 
 ## Current State
 
-Plant ID is a working Vite, React, Tailwind, and Vercel serverless plant-identification app. It supports temporary multi-photo identification, a private My Garden, purpose-aware saved photos, durable AI assessments, personalized care guides, dated observations, and explicit problem diagnosis.
+Plant ID is a working Vite, React, Tailwind, and Vercel serverless plant-identification app. It supports temporary multi-photo identification and a private My Garden with purpose-aware photos, durable AI records, a readable plant-record layout, recoverable deletion, and printable care sheets.
 
 ## What Works
 
@@ -16,6 +16,10 @@ Plant ID is a working Vite, React, Tailwind, and Vercel serverless plant-identif
 - Durable AI assessment history and a current personalized care guide with generation provenance and preserved input context.
 - Dated observations with optional problem photos and explicit diagnosis using selected observations, their problem photos, and only deliberately selected reference photos.
 - Private, server-authorized saved-photo retrieval and throttling for repeated failed unlock attempts.
+- A full-width vertical plant record ordered as Identity, Care Guide, Problems/Observations, and Diagnosis/Remediation.
+- Recently deleted plants can be reviewed and restored without losing their photos or durable records.
+- A print-only two-page Letter care sheet derived from the current plant aggregate, with no duplicate persistence model.
+- Larger controls, visible keyboard focus, responsive layouts, semantic alerts, and WCAG A/AA checks on the changed Garden view.
 - ESLint, Prettier, Node tests, and Playwright desktop/mobile smoke coverage.
 - Debug status panel hidden unless `?debug=1`.
 
@@ -33,6 +37,8 @@ git diff --check
 ```
 
 The local browser suite passed at desktop and mobile widths. A Vercel Preview also passed authenticated Garden checks against the migrated Plant ID schema, including durable reassessment, care-guide v2, observation, diagnosis v2, and reversible multipart photo upload/removal. Final production verification is recorded in the release handoff.
+
+Focused Part 5 verification on 2026-08-20 covered changed behavior only: deleted-plant listing/restoration, vertical record order, desktop/mobile overflow, WCAG A/AA checks, and the two-page print layout. The Vercel Preview built successfully and passed authenticated active/deleted Garden API checks plus a reversible restore/soft-delete cycle. Unchanged paid AI paths were not repeated.
 
 ## Environment and Deployment
 
@@ -70,15 +76,16 @@ PLANT_ID_FORCE_RATE_LIMIT
 - AI tasks use explicit, purpose-appropriate selections rather than the entire saved library.
 - Assessments, care guides, observations, and diagnoses are durable records; plant rows point to current records for efficient display.
 - Normal request handlers do not perform schema DDL. Tracked migrations own schema evolution.
-- Garden deletion is recoverable at the data-model level; full trash/restore UI remains deferred.
+- Garden deletion is recoverable through the Recently deleted UI; restoration preserves associated data.
 
 ## Known Limitations
 
 - Historical assessments and generated guides persist but do not yet have a dedicated history browser.
 - The existing production record used for Part 4 Preview validation had no suitable problem photo. Its diagnosis used observation text and one deliberately selected healthy reference photo; purpose-aware problem-photo behavior is covered by code and tests.
-- Print/PDF output, search, filtering, restore UI, and Miscellany integration remain deferred.
+- Search, filtering, permanent deletion, and Miscellany integration remain deferred.
+- Recently deleted currently contains 11 old synthetic Codex/Part 2 test records. They remain recoverable until Gavin explicitly authorizes permanent deletion.
 - Local end-to-end API behavior requires `npx vercel dev` and valid local secrets.
 
 ## Last Implementation Summary
 
-Part 4 adds purpose-aware photos without a saved-library cap, durable identity assessments, personalized care guides, observations, and observation-first problem diagnosis. It also separates the large application shell into workflow modules, moves persistence responsibilities into focused stores, removes runtime DDL, fixes rate-limit counter ordering, and establishes lint, formatting, and browser smoke checks.
+Part 5 reshapes each saved plant into a readable vertical record, adds Recently deleted restoration, and provides a condensed two-page print view derived from the existing aggregate. It also improves focus visibility, contrast, responsive behavior, and focused accessibility/browser coverage without changing the established AI or persistence models.

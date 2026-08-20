@@ -52,9 +52,22 @@ function serializePlant(row, photos = [], records = {}) {
     careGuide: records.careGuide || null,
     observations: records.observations || [],
     diagnosis: records.diagnosis || null,
+    deletedAt: row.deleted_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+async function listDeletedPlants(db = requireDb()) {
+  const { rows } = await db.query(
+    `select p.*,
+      (select count(*) from plant_id.garden_photos ph
+       where ph.plant_id = p.id and ph.deleted_at is null) as photo_count
+     from plant_id.garden_plants p
+     where p.deleted_at is not null
+     order by p.deleted_at desc`,
+  );
+  return rows.map((row) => serializePlant(row));
 }
 
 async function listPlants() {
@@ -161,10 +174,22 @@ async function softDeletePlant(id) {
   return rowCount > 0;
 }
 
+async function restorePlant(id, db = requireDb()) {
+  const { rowCount } = await db.query(
+    `update plant_id.garden_plants
+     set deleted_at = null, updated_at = now()
+     where id = $1 and deleted_at is not null`,
+    [id],
+  );
+  return rowCount > 0;
+}
+
 module.exports = {
   createPlant,
   getPlant,
+  listDeletedPlants,
   listPlants,
+  restorePlant,
   serializePlant,
   softDeletePlant,
   updatePlant,

@@ -350,3 +350,72 @@ test("garden photo persistence is multipart and observation diagnosis stays purp
   );
   assert.match(source("api/garden-identify-plant.js"), /identity_reference/);
 });
+
+test("deleted plants remain separate and can be restored without deleting related records", async () => {
+  const { listDeletedPlants, restorePlant } = require("../server/garden-store");
+  const queries = [];
+  const db = {
+    query: async (sql, params) => {
+      queries.push({ sql, params });
+      if (
+        sql.includes("deleted_at is not null") &&
+        sql.includes("select p.*")
+      ) {
+        return {
+          rows: [
+            {
+              id: "plant-id",
+              plant_name: "Big Red",
+              plant_type: "Cordyline",
+              identity_source: "manual",
+              ai_assessment_state: "none",
+              photo_count: 2,
+              deleted_at: "2026-08-20T18:00:00Z",
+              created_at: "2026-08-19T18:00:00Z",
+              updated_at: "2026-08-20T18:00:00Z",
+            },
+          ],
+          rowCount: 1,
+        };
+      }
+      return { rows: [], rowCount: 1 };
+    },
+  };
+
+  const deleted = await listDeletedPlants(db);
+  assert.equal(deleted.length, 1);
+  assert.equal(deleted[0].deletedAt, "2026-08-20T18:00:00Z");
+  assert.equal(deleted[0].photoCount, 2);
+  assert.equal(await restorePlant("plant-id", db), true);
+
+  const restore = queries.find(({ sql }) =>
+    sql.includes("set deleted_at = null"),
+  );
+  assert.ok(restore);
+  assert.doesNotMatch(restore.sql, /delete from/i);
+  assert.deepEqual(restore.params, ["plant-id"]);
+  assert.match(source("api/garden-plants.js"), /view.*deleted/s);
+  assert.match(source("api/garden-plants/[id].js"), /restorePlant/);
+});
+
+test("Part 5 plant record and print layout preserve the required reading order", () => {
+  const views = source("src/features/garden/GardenViews.jsx");
+  const print = source("src/features/garden/PlantPrintView.jsx");
+  const headings = [
+    "Identity",
+    "Care Guide",
+    "Problems / Observations",
+    "Diagnosis / Remediation",
+  ];
+  for (let index = 1; index < headings.length; index += 1) {
+    assert.ok(
+      views.indexOf(headings[index - 1]) < views.indexOf(headings[index]),
+    );
+  }
+  assert.equal((print.match(/className="print-page/g) || []).length, 2);
+  assert.match(source("src/index.css"), /@page[\s\S]*size: Letter portrait/);
+  assert.match(
+    source("src/index.css"),
+    /\.screen-only[\s\S]*display: none !important/,
+  );
+});

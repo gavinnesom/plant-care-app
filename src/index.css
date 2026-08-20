@@ -33,18 +33,7 @@
   }
 
   html {
-    background:
-      radial-gradient(
-        circle at 14% 18%,
-        rgba(123, 63, 98, 0.24),
-        transparent 28rem
-      ),
-      radial-gradient(
-        circle at 86% 8%,
-        rgba(215, 180, 94, 0.16),
-        transparent 24rem
-      ),
-      linear-gradient(135deg, #5f6548 0%, #79664c 45%, #4d5d3d 100%);
+    background: #596047;
   }
 
   body {
@@ -58,19 +47,8 @@
       BlinkMacSystemFont,
       "Segoe UI",
       sans-serif;
-    background:
-      radial-gradient(
-        circle at 18% 12%,
-        rgba(185, 217, 137, 0.18),
-        transparent 22rem
-      ),
-      radial-gradient(
-        circle at 78% 28%,
-        rgba(123, 63, 98, 0.2),
-        transparent 26rem
-      ),
-      linear-gradient(145deg, rgba(44, 39, 29, 0.22), transparent 42%),
-      linear-gradient(135deg, #626a4d 0%, #766449 47%, #44583a 100%);
+    background: #596047;
+    font-size: 16px;
   }
 
   button,
@@ -81,27 +59,23 @@
   textarea {
     font: inherit;
   }
+
+  button,
+  input,
+  select,
+  textarea,
+  summary {
+    outline-offset: 3px;
+  }
+
+  :focus-visible {
+    outline: 3px solid #f4cf70;
+  }
 }
 
 @layer components {
   .app-shell {
-    background:
-      radial-gradient(
-        ellipse at 16% 18%,
-        rgba(244, 239, 226, 0.1),
-        transparent 20rem
-      ),
-      radial-gradient(
-        ellipse at 78% 8%,
-        rgba(123, 63, 98, 0.16),
-        transparent 25rem
-      ),
-      radial-gradient(
-        ellipse at 64% 74%,
-        rgba(185, 217, 137, 0.09),
-        transparent 26rem
-      ),
-      linear-gradient(165deg, rgba(44, 39, 29, 0.12), transparent 48%);
+    background: rgba(44, 39, 29, 0.12);
   }
 
   .mode-button {
@@ -127,11 +101,16 @@
   }
 
   .garden-button {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     border-radius: 8px;
     border: 1px solid var(--app-border);
     background: var(--app-bark);
     color: var(--app-text);
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     font-weight: 900;
     padding: 0.75rem 1rem;
     transition:
@@ -145,7 +124,7 @@
 
   .garden-button:disabled {
     cursor: not-allowed;
-    opacity: 0.65;
+    opacity: 0.72;
   }
 
   .garden-button-primary {
@@ -166,6 +145,15 @@
     background: #963f4d;
   }
 
+  .danger-link {
+    color: #ffb5bc;
+  }
+
+  .danger-link:hover {
+    color: #ffd9dd;
+    text-decoration: underline;
+  }
+
   .garden-input {
     width: 100%;
     border-radius: 8px;
@@ -184,14 +172,14 @@
 
   .form-label {
     color: var(--app-text-muted);
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     font-weight: 900;
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
 
   .garden-tile {
-    border-radius: 16px;
+    border-radius: 8px;
     border: 1px solid var(--app-border);
     background: var(--app-card);
     padding: 1rem;
@@ -234,5 +222,377 @@
   .photo-picker:hover {
     border-color: var(--app-moss-dark);
     transform: translateY(-1px);
+  }
+
+  .garden-header-band {
+    border-bottom: 1px solid var(--app-border-strong);
+    padding: 1rem 0 1.5rem;
+  }
+
+  .garden-back-link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--app-leaf);
+    font-size: 0.9375rem;
+    font-weight: 900;
+  }
+
+  .plant-record {
+    width: 100%;
+  }
+
+  .record-stack {
+    margin-top: 1.5rem;
+    border-block: 1px solid var(--app-border-strong);
+  }
+
+  .record-section {
+    padding: clamp(1.5rem, 4vw, 3rem);
+  }
+
+  .record-section + .record-section {
+    border-top: 1px solid var(--app-border-strong);
+  }
+
+  .record-section-dark {
+    background: #343d2a;
+    color: var(--app-text);
+  }
+
+  .record-section-light {
+    background: #f4efe2;
+    color: var(--app-ink);
+  }
+
+  .record-section-title {
+    color: inherit;
+    font-size: clamp(1.65rem, 3vw, 2.25rem);
+    font-weight: 900;
+    line-height: 1.15;
+  }
+
+  .record-section-heading-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .record-subheading {
+    color: var(--app-text);
+    font-size: 1.125rem;
+    font-weight: 900;
+  }
+
+  .record-empty {
+    margin-top: 1.5rem;
+    color: var(--app-ink-muted);
+    font-size: 1rem;
+  }
+
+  .assessment-summary {
+    border-left: 4px solid var(--app-gold);
+    color: var(--app-text);
+    font-size: 1rem;
+    line-height: 1.65;
+    padding-left: 1rem;
+  }
+
+  .plant-form-ai {
+    border-left: 4px solid var(--app-moss);
+    color: var(--app-text);
+    font-size: 1rem;
+    padding-left: 1rem;
+  }
+
+  .assessment-summary summary {
+    cursor: pointer;
+    color: var(--app-moss);
+    font-weight: 900;
+  }
+
+  .care-guide-grid {
+    display: grid;
+    gap: 1.25rem;
+    margin-top: 1.75rem;
+    font-size: 1rem;
+  }
+
+  .care-guide-grid > div {
+    border-top: 2px solid rgba(78, 109, 49, 0.28);
+    padding-top: 0.8rem;
+  }
+
+  .care-guide-grid dt {
+    color: var(--app-moss-dark);
+    font-size: 1rem;
+    font-weight: 900;
+    text-transform: capitalize;
+  }
+
+  .care-guide-grid dd {
+    margin-top: 0.4rem;
+    max-width: 78ch;
+    color: var(--app-ink);
+    line-height: 1.65;
+  }
+
+  .diagnosis-view {
+    margin-top: 1.75rem;
+    max-width: 82ch;
+    color: var(--app-ink);
+    font-size: 1rem;
+    line-height: 1.65;
+  }
+
+  .diagnosis-summary {
+    border-left: 4px solid var(--app-plum);
+    color: var(--app-ink);
+    font-size: 1.1rem;
+    font-weight: 900;
+    padding-left: 1rem;
+  }
+
+  .print-sheet {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .care-guide-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
+@page {
+  size: Letter portrait;
+  margin: 0.35in;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    font-size: 9pt;
+  }
+
+  .app-shell {
+    min-height: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .app-shell > div {
+    max-width: none !important;
+  }
+
+  .screen-only,
+  .screen-only * {
+    display: none !important;
+  }
+
+  .print-sheet {
+    display: block;
+    color: #111;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .print-page {
+    position: relative;
+    min-height: 10in;
+    overflow: hidden;
+    break-after: page;
+    page-break-after: always;
+    padding-bottom: 0.28in;
+  }
+
+  .print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .print-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    border-bottom: 3px solid #26331f;
+    padding-bottom: 0.12in;
+  }
+
+  .print-header h1 {
+    margin: 0.03in 0 0;
+    font-size: 25pt;
+    line-height: 1;
+  }
+
+  .print-header > p {
+    margin: 0;
+    color: #4c3150;
+    font-size: 12pt;
+    font-weight: 700;
+  }
+
+  .print-kicker {
+    margin: 0;
+    color: #3d5a2d;
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .print-identity,
+  .print-problem-top {
+    display: grid;
+    grid-template-columns: 1fr 2.25in;
+    gap: 0.18in;
+    margin-top: 0.15in;
+  }
+
+  .print-identity-name {
+    margin: 0.04in 0;
+    font-size: 15pt;
+    font-weight: 700;
+  }
+
+  .print-identity p,
+  .print-problem-top p {
+    margin-block: 0.04in;
+  }
+
+  .print-photos {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.06in;
+    margin: 0;
+  }
+
+  .print-photos-1 {
+    grid-template-columns: 1fr;
+  }
+
+  .print-photos img {
+    width: 100%;
+    height: 1.35in;
+    border: 1px solid #777;
+    object-fit: cover;
+  }
+
+  .print-photos-1 img {
+    height: 1.5in;
+  }
+
+  .print-photos figcaption {
+    grid-column: 1 / -1;
+    color: #444;
+    font-size: 7pt;
+    text-align: right;
+  }
+
+  .print-summary,
+  .print-diagnosis-summary {
+    margin: 0.14in 0;
+    border-left: 4px solid #61794b;
+    background: #f1f3ed;
+    font-weight: 700;
+    line-height: 1.3;
+    padding: 0.1in 0.12in;
+  }
+
+  .print-care-grid,
+  .print-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.1in 0.18in;
+  }
+
+  .print-care-footer {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: 0.18in;
+    margin-top: 0.12in;
+  }
+
+  .print-block,
+  .print-causes {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border-top: 1px solid #7b846f;
+    padding-top: 0.06in;
+  }
+
+  .print-block-title {
+    margin: 0;
+    color: #304926;
+    font-size: 9pt;
+    font-weight: 700;
+  }
+
+  .print-block p,
+  .print-block ul,
+  .print-causes p {
+    margin: 0.03in 0 0;
+    line-height: 1.28;
+  }
+
+  .print-block ul {
+    padding-left: 0.16in;
+  }
+
+  .print-observations {
+    margin: 0.05in 0 0;
+    padding-left: 0.18in;
+  }
+
+  .print-observations li {
+    margin-bottom: 0.04in;
+    line-height: 1.25;
+  }
+
+  .print-observations time {
+    display: inline-block;
+    min-width: 0.78in;
+    font-weight: 700;
+  }
+
+  .print-diagnosis {
+    display: grid;
+    gap: 0.11in;
+    margin-top: 0.13in;
+  }
+
+  .print-confidence {
+    margin-top: 0.05in !important;
+    color: #4c3150;
+  }
+
+  .print-causes > div {
+    display: grid;
+    grid-template-columns: 1.35in 1fr;
+    gap: 0.08in;
+    margin-top: 0.05in;
+    line-height: 1.25;
+  }
+
+  .print-empty {
+    margin-top: 0.3in;
+    border: 1px solid #888;
+    padding: 0.2in;
+  }
+
+  .print-footer {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid #999;
+    padding-top: 0.05in;
+    color: #555;
+    font-size: 7pt;
   }
 }

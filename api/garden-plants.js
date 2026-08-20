@@ -1,5 +1,9 @@
 const { requireGardenSession } = require("../server/garden-session");
-const { createPlant, listPlants } = require("../server/garden-store");
+const {
+  createPlant,
+  listDeletedPlants,
+  listPlants,
+} = require("../server/garden-store");
 const { gardenError, readJson } = require("../server/http");
 
 module.exports = async function handler(req, res) {
@@ -7,6 +11,10 @@ module.exports = async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
+      const url = new URL(req.url, "https://plants.gavinnesom.com");
+      if (url.searchParams.get("view") === "deleted") {
+        return res.status(200).json({ plants: await listDeletedPlants() });
+      }
       return res.status(200).json({ plants: await listPlants() });
     }
 
