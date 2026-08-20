@@ -67,7 +67,7 @@ The printable version should be a deliberately condensed, dense, two-sided care 
 
 The app includes a small inline SVG icon system for care traits such as sun exposure, water needs, soil type, pet safety, California suitability, and beginner friendliness.
 
-The current app still has a one-photo identification flow. Part 2 adds the private My Garden foundation: owner unlock, saved individual plants, the Grow form with one optional manual photo, private saved photos, and individual plant pages that can add or replace one saved photo. Multi-photo identification, reassessment history, full care-guide personalization, diagnosis workflows, and print/PDF remain later work.
+The current app still has a one-photo identification flow. Part 2 adds the private My Garden foundation: owner unlock, saved individual plants, the Grow form with one optional manual photo, private saved photos, and individual plant pages that can add, replace, or soft-delete one saved plant. Multi-photo identification, reassessment history, full care-guide personalization, diagnosis workflows, and print/PDF remain later work.
 
 ## Tech Stack
 
@@ -130,6 +130,8 @@ npx vercel dev
 Do not use plain `npm run dev` when testing identification. It only starts the Vite frontend, so image preview will work but `/api/identify-plant` will not be served and no real identification can happen.
 
 The app is only working end-to-end when clicking `Identify plant` sends a multipart POST to `/api/identify-plant` and the result panel is populated from the API response.
+
+For release verification, a real production `POST /api/identify-plant` with a plant image is required unless Gavin explicitly says otherwise.
 
 ## Vercel Deployment Notes
 
@@ -202,7 +204,7 @@ Saved plants are individual records. **AI ID** stores the AI's guess; **Plant Ty
 - `api/identify-plant.js`: Vercel-compatible OpenAI vision endpoint
 - `api/garden-session.js`: owner unlock and session status endpoint
 - `api/garden-plants.js`: authorized Garden list/create endpoint
-- `api/garden-plants/[id].js`: authorized individual plant read/edit endpoint
+- `api/garden-plants/[id].js`: authorized individual plant read/edit/soft-delete endpoint
 - `api/garden-photos/[id].js`: authorized private photo endpoint
 - `server/rate-limit.js`: server-only Supabase-backed rate-limit boundary
 - `server/garden-session.js`: signed 30-day Garden session cookie helpers

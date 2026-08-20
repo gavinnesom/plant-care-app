@@ -248,6 +248,19 @@ async function updatePlant(id, input = {}) {
   return getPlant(id);
 }
 
+async function softDeletePlant(id) {
+  const db = requireDb();
+  await ensurePlantNameColumn(db);
+  const { rowCount } = await db.query(
+    `update plant_id.garden_plants
+     set deleted_at = now(),
+       updated_at = now()
+     where id = $1 and deleted_at is null`,
+    [id]
+  );
+  return rowCount > 0;
+}
+
 async function getPhoto(photoId) {
   const db = requireDb();
   await ensurePlantNameColumn(db);
@@ -268,5 +281,6 @@ module.exports = {
   listPlants,
   normalizeAiAssessment,
   normalizePhoto,
+  softDeletePlant,
   updatePlant,
 };

@@ -7,6 +7,7 @@ The current app is a Vite React frontend plus Vercel-compatible serverless funct
 - The frontend owns file selection, local preview, loading/error state, and result rendering.
 - The identification API route owns request orchestration, image validation, rate limiting, OpenAI calls, and response handling. `server/plant-identification-core.js` owns multipart image extraction, model JSON extraction, and result normalization. `server/rate-limit.js` owns the server-only Supabase rate-limit boundary.
 - Garden APIs own private owner-session checks, Garden reads/writes, and private photo serving. `server/garden-session.js` owns signed session cookies; `server/garden-store.js` owns Garden persistence and photo storage.
+- Individual Garden deletion is a server-authorized soft delete that sets `deleted_at`; normal lists and photo reads exclude deleted records.
 
 ## Current Data Flow
 

@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
+const path = require('node:path');
 const {
   UNLOCK_ATTEMPT_LIMIT,
   checkOwnerUnlockRateLimit,
@@ -129,4 +130,50 @@ test('owner unlock throttles repeated bad guesses by request source', () => {
   assert.equal(limited.allowed, false);
   assert.ok(limited.retryAfterSeconds > 0);
   clearOwnerUnlockAttemptsForTests();
+});
+
+test('soft deletion marks Garden records recoverably and normal listing excludes deleted rows', async () => {
+  const dbPath = path.resolve(__dirname, '..', 'server', 'db.js');
+  const storePath = path.resolve(__dirname, '..', 'server', 'garden-store.js');
+  const previousDbCache = require.cache[dbPath];
+  const previousStoreCache = require.cache[storePath];
+  const queries = [];
+
+  require.cache[dbPath] = {
+    id: dbPath,
+    filename: dbPath,
+    loaded: true,
+    exports: {
+      getPool: () => ({
+        query: async (sql, params) => {
+          queries.push({ sql, params });
+          if (sql.includes('information_schema.columns')) return { rows: [], rowCount: 0 };
+          if (sql.includes('select p.*')) return { rows: [], rowCount: 0 };
+          if (sql.includes('set deleted_at')) return { rows: [], rowCount: 1 };
+          return { rows: [], rowCount: 0 };
+        },
+      }),
+    },
+  };
+  delete require.cache[storePath];
+
+  try {
+    const { listPlants, softDeletePlant } = require('../server/garden-store');
+    assert.equal(await softDeletePlant('plant-id'), true);
+    await listPlants();
+
+    assert.match(queries.find((query) => query.sql.includes('set deleted_at')).sql, /deleted_at = now\(\)/);
+    assert.match(queries.find((query) => query.sql.includes('select p.*')).sql, /where p\.deleted_at is null/);
+  } finally {
+    if (previousDbCache) {
+      require.cache[dbPath] = previousDbCache;
+    } else {
+      delete require.cache[dbPath];
+    }
+    if (previousStoreCache) {
+      require.cache[storePath] = previousStoreCache;
+    } else {
+      delete require.cache[storePath];
+    }
+  }
 });
