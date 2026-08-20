@@ -21,7 +21,7 @@ export function TitleGroup({ title, action, size = "normal" }) {
     <div className="flex min-h-12 items-center gap-3">
       {action}
       <h1
-        className={`${size === "large" ? "text-5xl" : "text-4xl"} max-w-3xl font-black tracking-tight text-[var(--app-text)]`}
+        className={`${size === "large" ? "text-5xl" : "text-4xl"} max-w-3xl font-black text-[var(--app-text)]`}
       >
         {title}
       </h1>
@@ -31,7 +31,10 @@ export function TitleGroup({ title, action, size = "normal" }) {
 
 export function ErrorBanner({ children }) {
   return (
-    <div className="mt-5 rounded-[12px] border border-rose-300/50 bg-rose-100/85 p-4 text-sm font-bold text-rose-950">
+    <div
+      role="alert"
+      className="mt-5 rounded-[8px] border border-rose-300/50 bg-rose-100/95 p-4 text-base font-bold text-rose-950"
+    >
       {children}
     </div>
   );
@@ -73,10 +76,14 @@ export function UnlockDialog({ onUnlocked, onCancel }) {
         <h2 className="mt-2 text-3xl font-black text-[var(--app-text)]">
           Unlock My Garden
         </h2>
+        <label className="form-label mt-5 block" htmlFor="garden-owner-key">
+          Owner key
+        </label>
         <input
+          id="garden-owner-key"
           autoFocus
           type="password"
-          className="garden-input mt-5"
+          className="garden-input mt-2"
           value={ownerKey}
           onChange={(event) => setOwnerKey(event.target.value)}
           placeholder="Owner key"

@@ -14,13 +14,13 @@ The app began as a polished one-photo plant-identification demo. It now has a wo
 - Gavin can unlock private My Garden on his MacBook and phone.
 - Public visitors may use temporary identification but must not view or modify My Garden.
 
-## Current Milestone
+## Current State
 
-Part 4 makes each saved plant a useful long-form record: durable AI identity assessments, purpose-aware photos, personalized care guides, dated observations, and explicit observation-based problem diagnosis.
+Part 5 completes the saved-plant experience: each plant is a readable vertical record with durable AI identity assessments, purpose-aware photos, personalized care guides, dated observations, problem diagnosis, recoverable deletion, and a condensed two-sided printable care sheet.
 
 ## Current Non-Goals
 
-This milestone does not implement print/PDF output, search, filtering, conventional multi-user accounts, a full history browser, or Miscellany integration.
+The current product does not implement search, filtering, conventional multi-user accounts, a full history browser, permanent deletion from Recently deleted, or Miscellany integration.
 
 ## Product Principles
 
@@ -43,4 +43,5 @@ My Garden is private and intended only for Gavin. It uses one fixed owner passph
 - My Garden keeps Plant Type and AI ID visibly separate.
 - Saved plants can store multiple private photos and request explicit AI reassessment.
 - Care guides, observations, and diagnoses persist separately with useful provenance.
-- Part 5 can render the current plant record without inventing a second data model.
+- The complete plant record remains readable on desktop and mobile.
+- Print renders the current aggregate as a deliberately condensed two-page care sheet without inventing a second data model.

@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { ArrowLeft, Plus, Printer, RotateCcw, Trash2 } from "lucide-react";
 import { ErrorBanner, TitleGroup } from "../../components/AppChrome";
 import { MAX_IDENTIFICATION_IMAGES } from "../../lib/plantSchema";
+import { PlantPrintView } from "./PlantPrintView";
 
 export function GardenList({
   plants,
@@ -8,19 +10,27 @@ export function GardenList({
   error,
   modeControl,
   onGrow,
+  onDeleted,
   onOpenPlant,
 }) {
   return (
     <main>
-      <section className="rounded-[16px] border border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-xl shadow-black/10">
+      <section className="garden-header-band">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <TitleGroup title="My Garden" action={modeControl} />
-          <button
-            className="garden-button garden-button-primary"
-            onClick={onGrow}
-          >
-            Grow
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button className="garden-button" onClick={onDeleted}>
+              <Trash2 aria-hidden="true" size={18} />
+              Recently deleted
+            </button>
+            <button
+              className="garden-button garden-button-primary"
+              onClick={onGrow}
+            >
+              <Plus aria-hidden="true" size={18} />
+              Grow
+            </button>
+          </div>
         </div>
       </section>
       {error && <ErrorBanner>{error}</ErrorBanner>}
@@ -71,6 +81,51 @@ export function GardenList({
   );
 }
 
+export function DeletedPlants({ plants, loading, error, onBack, onRestore }) {
+  return (
+    <main>
+      <section className="garden-header-band">
+        <button className="garden-back-link" onClick={onBack}>
+          <ArrowLeft aria-hidden="true" size={18} />
+          My Garden
+        </button>
+        <h1 className="mt-4 text-4xl font-black text-[var(--app-text)]">
+          Recently deleted
+        </h1>
+      </section>
+      {error && <ErrorBanner>{error}</ErrorBanner>}
+      {loading && <p className="mt-6 text-lg">Loading deleted plants...</p>}
+      {!loading && !plants.length && (
+        <p className="mt-6 border-y border-[var(--app-border)] py-10 text-center text-lg text-[var(--app-text-muted)]">
+          Nothing to restore.
+        </p>
+      )}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {plants.map((plant) => (
+          <article key={plant.id} className="garden-tile">
+            <h2 className="text-xl font-black text-[var(--app-text)]">
+              {plant.plantName}
+            </h2>
+            <p className="mt-2 text-base text-[var(--app-text-muted)]">
+              {plant.plantType || "Plant Type not set"}
+            </p>
+            <p className="mt-2 text-sm text-[var(--app-text-muted)]">
+              Deleted {formatDate(plant.deletedAt)}
+            </p>
+            <button
+              className="garden-button garden-button-primary mt-5"
+              onClick={() => onRestore(plant)}
+            >
+              <RotateCcw aria-hidden="true" size={18} />
+              Restore plant
+            </button>
+          </article>
+        ))}
+      </div>
+    </main>
+  );
+}
+
 export function GrowPlant({
   draft,
   onChange,
@@ -86,7 +141,7 @@ export function GrowPlant({
 }) {
   const blocked = Boolean(busy);
   return (
-    <main className="rounded-[16px] border border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-xl shadow-black/10">
+    <main className="rounded-[8px] border border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-xl shadow-black/10">
       <TitleGroup title="Save a garden plant" action={modeControl} />
       {error && <ErrorBanner>{error}</ErrorBanner>}
       <div className="mt-6 grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
@@ -149,6 +204,7 @@ export function PlantDetail({
   onCareGuide,
   onSaveObservation,
   onDiagnose,
+  onPrint,
 }) {
   const blocked = Boolean(busy);
   const referencePhotos = plant.photos.filter(
@@ -175,94 +231,123 @@ export function PlantDetail({
   };
 
   return (
-    <main className="rounded-[16px] border border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-xl shadow-black/10">
-      <TitleGroup title={plant.plantName} action={modeControl} />
-      <button
-        className="mt-3 text-sm font-black text-[var(--app-leaf)]"
-        onClick={onBack}
-      >
-        Back to My Garden
-      </button>
-      {error && <ErrorBanner>{error}</ErrorBanner>}
+    <>
+      <main className="plant-record">
+        <header className="garden-header-band screen-only">
+          <TitleGroup title={plant.plantName} action={modeControl} />
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button className="garden-back-link" onClick={onBack}>
+              <ArrowLeft aria-hidden="true" size={18} />
+              My Garden
+            </button>
+            <button className="garden-button" onClick={onPrint}>
+              <Printer aria-hidden="true" size={18} />
+              Print / laminate guide
+            </button>
+          </div>
+        </header>
+        {error && <ErrorBanner>{error}</ErrorBanner>}
 
-      <div className="mt-7 grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="grid content-start gap-8">
-          <section>
-            <div className="flex items-center justify-between gap-3">
-              <SectionHeading>Identity / reference photos</SectionHeading>
-              <FileButton
-                label="Add"
-                disabled={blocked}
-                onFiles={onAddReferencePhotos}
-              />
+        <div className="record-stack screen-only">
+          <section
+            className="record-section record-section-dark"
+            aria-labelledby="identity-heading"
+          >
+            <SectionHeading id="identity-heading">Identity</SectionHeading>
+            <div className="mt-6 grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="record-subheading">
+                    Identity / reference photos
+                  </h3>
+                  <FileButton
+                    label="Add photos"
+                    disabled={blocked}
+                    onFiles={onAddReferencePhotos}
+                  />
+                </div>
+                <SavedPhotos
+                  photos={referencePhotos}
+                  selectedIds={plant.selectedReferencePhotoIds || []}
+                  onToggle={toggleReference}
+                  onDelete={onDeletePhoto}
+                  disabled={blocked}
+                />
+                <p className="mt-3 text-sm text-[var(--app-text-muted)]">
+                  {(plant.selectedReferencePhotoIds || []).length} of{" "}
+                  {MAX_IDENTIFICATION_IMAGES} selected for Identify/Re-identify
+                </p>
+                <button
+                  className="garden-button garden-button-primary mt-3 w-full"
+                  disabled={
+                    blocked || !(plant.selectedReferencePhotoIds || []).length
+                  }
+                  onClick={onIdentify}
+                >
+                  {busy === "identify-plant"
+                    ? "Identifying..."
+                    : plant.aiAssessment
+                      ? "Re-identify with AI"
+                      : "Identify with AI"}
+                </button>
+              </div>
+              <div>
+                <PlantForm value={plant} onChange={onChange} />
+                <AssessmentSummary assessment={plant.aiAssessment} />
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <button
+                    className="garden-button garden-button-primary"
+                    disabled={blocked}
+                    onClick={onSave}
+                  >
+                    {busy === "save-plant" ? "Saving..." : "Save edits"}
+                  </button>
+                  <button
+                    className="garden-button garden-button-danger"
+                    disabled={blocked}
+                    onClick={onDelete}
+                  >
+                    <Trash2 aria-hidden="true" size={18} />
+                    {busy === "delete-plant"
+                      ? "Moving..."
+                      : "Move to recently deleted"}
+                  </button>
+                </div>
+              </div>
             </div>
-            <SavedPhotos
-              photos={referencePhotos}
-              selectedIds={plant.selectedReferencePhotoIds || []}
-              onToggle={toggleReference}
-              onDelete={onDeletePhoto}
-              disabled={blocked}
-            />
-            <p className="mt-3 text-xs text-[var(--app-text-muted)]">
-              {(plant.selectedReferencePhotoIds || []).length} of{" "}
-              {MAX_IDENTIFICATION_IMAGES} selected for Identify/Re-identify
-            </p>
-            <button
-              className="garden-button garden-button-primary mt-3 w-full"
-              disabled={
-                blocked || !(plant.selectedReferencePhotoIds || []).length
-              }
-              onClick={onIdentify}
-            >
-              {busy === "identify-plant"
-                ? "Identifying..."
-                : plant.aiAssessment
-                  ? "Re-identify with AI"
-                  : "Identify with AI"}
-            </button>
           </section>
 
-          <section className="border-t border-[var(--app-border)] pt-7">
-            <SectionHeading>Care guide</SectionHeading>
-            <button
-              className="garden-button garden-button-primary mt-3"
-              disabled={blocked}
-              onClick={onCareGuide}
-            >
-              {busy === "care-guide"
-                ? "Generating..."
-                : plant.careGuide
-                  ? "Refresh care guide"
-                  : "Generate care guide"}
-            </button>
-            {plant.careGuide && <CareGuide guide={plant.careGuide.guide} />}
-          </section>
-        </div>
-
-        <div className="grid content-start gap-8">
-          <section>
-            <PlantForm value={plant} onChange={onChange} />
-            <AssessmentSummary assessment={plant.aiAssessment} />
-            <div className="mt-5 flex flex-wrap gap-3">
+          <section
+            className="record-section record-section-light"
+            aria-labelledby="care-heading"
+          >
+            <div className="record-section-heading-row">
+              <SectionHeading id="care-heading">Care Guide</SectionHeading>
               <button
                 className="garden-button garden-button-primary"
                 disabled={blocked}
-                onClick={onSave}
+                onClick={onCareGuide}
               >
-                {busy === "save-plant" ? "Saving..." : "Save edits"}
-              </button>
-              <button
-                className="garden-button garden-button-danger"
-                disabled={blocked}
-                onClick={onDelete}
-              >
-                {busy === "delete-plant" ? "Deleting..." : "Delete plant"}
+                {busy === "care-guide"
+                  ? "Generating..."
+                  : plant.careGuide
+                    ? "Refresh care guide"
+                    : "Generate care guide"}
               </button>
             </div>
+            {plant.careGuide && <CareGuide guide={plant.careGuide.guide} />}
+            {!plant.careGuide && (
+              <p className="record-empty">No saved care guide yet.</p>
+            )}
           </section>
 
-          <section className="border-t border-[var(--app-border)] pt-7">
-            <SectionHeading>Observations / problems</SectionHeading>
+          <section
+            className="record-section record-section-dark"
+            aria-labelledby="problems-heading"
+          >
+            <SectionHeading id="problems-heading">
+              Problems / Observations
+            </SectionHeading>
             <ObservationForm
               disabled={blocked}
               onSave={onSaveObservation}
@@ -276,20 +361,40 @@ export function PlantDetail({
               onDeletePhoto={onDeletePhoto}
               disabled={blocked}
             />
-            <button
-              className="garden-button garden-button-primary mt-4"
-              disabled={blocked || !(plant.selectedObservationIds || []).length}
-              onClick={onDiagnose}
-            >
-              {busy === "diagnosis" ? "Diagnosing..." : "Diagnose problem"}
-            </button>
+          </section>
+
+          <section
+            className="record-section record-section-light"
+            aria-labelledby="diagnosis-heading"
+          >
+            <div className="record-section-heading-row">
+              <SectionHeading id="diagnosis-heading">
+                Diagnosis / Remediation
+              </SectionHeading>
+              <button
+                className="garden-button garden-button-primary"
+                disabled={
+                  blocked || !(plant.selectedObservationIds || []).length
+                }
+                onClick={onDiagnose}
+              >
+                {busy === "diagnosis" ? "Diagnosing..." : "Diagnose problem"}
+              </button>
+            </div>
             {plant.diagnosis && (
               <DiagnosisView diagnosis={plant.diagnosis.diagnosis} />
             )}
+            {!plant.diagnosis && (
+              <p className="record-empty">
+                Select an observation and run a diagnosis to see practical
+                actions.
+              </p>
+            )}
           </section>
         </div>
-      </div>
-    </main>
+      </main>
+      <PlantPrintView plant={plant} />
+    </>
   );
 }
 
@@ -337,8 +442,8 @@ function PlantForm({ value, onChange }) {
           </select>
         </label>
       )}
-      <div className="border-l-4 border-[var(--app-moss)] pl-4 text-sm text-[var(--app-ink)]">
-        <p className="form-label text-[var(--app-moss-dark)]">Latest AI ID</p>
+      <div className="plant-form-ai">
+        <p className="form-label">Latest AI ID</p>
         <p className="mt-2 font-black">
           {value.result?.scientificName ||
             value.aiScientificName ||
@@ -369,7 +474,7 @@ function PhotoFilePicker({
           >
             <img
               src={photo.url}
-              alt=""
+              alt={photo.file.name || "Selected plant reference"}
               className="aspect-[4/3] w-full object-cover"
             />
             <figcaption className="grid gap-2 p-3 text-xs">
@@ -382,7 +487,7 @@ function PhotoFilePicker({
                 Use for AI
               </label>
               <button
-                className="text-left font-bold text-[var(--app-danger)]"
+                className="danger-link text-left font-bold"
                 onClick={() => onRemove(photo.id)}
               >
                 Remove
@@ -425,7 +530,7 @@ function SavedPhotos({ photos, selectedIds, onToggle, onDelete, disabled }) {
               Use for AI ID
             </label>
             <button
-              className="text-left font-bold text-[var(--app-danger)]"
+              className="danger-link text-left font-bold"
               disabled={disabled}
               onClick={() => onDelete(photo.id)}
             >
@@ -450,8 +555,12 @@ function ObservationForm({ disabled, onSave, saving }) {
     }
   };
   return (
-    <form className="mt-4 grid gap-3" onSubmit={submit}>
+    <form className="mt-5 grid gap-3" onSubmit={submit}>
+      <label className="form-label" htmlFor="observation-description">
+        What are you noticing?
+      </label>
       <textarea
+        id="observation-description"
         className="garden-input min-h-24"
         required
         value={description}
@@ -488,7 +597,8 @@ function AssessmentSummary({ assessment }) {
   if (!assessment) return null;
   const result = assessment.result || {};
   return (
-    <div className="mt-5 border-l-4 border-[var(--app-gold)] pl-4 text-sm text-[var(--app-ink)]">
+    <details className="assessment-summary mt-6" open>
+      <summary>Latest AI assessment</summary>
       <p className="font-black">
         AI confidence: {Math.round(Number(assessment.confidence) * 100)}%
       </p>
@@ -496,17 +606,17 @@ function AssessmentSummary({ assessment }) {
         <p className="mt-2 leading-relaxed">{result.identificationNotes}</p>
       )}
       {result.likelyAlternatives?.length > 0 && (
-        <p className="mt-2 text-[var(--app-ink-muted)]">
+        <p className="mt-2 text-[var(--app-text-muted)]">
           Alternatives:{" "}
           {result.likelyAlternatives
             .map((item) => item.scientificName || item.commonName)
             .join(", ")}
         </p>
       )}
-      <p className="mt-2 text-xs text-[var(--app-text-muted)]">
+      <p className="mt-3 text-sm text-[var(--app-text-muted)]">
         Assessed {new Date(assessment.createdAt).toLocaleDateString()}
       </p>
-    </div>
+    </details>
   );
 }
 
@@ -556,7 +666,7 @@ function ObservationList({
                     className="aspect-square w-full rounded-[6px] object-cover"
                   />
                   <button
-                    className="mt-1 text-xs font-bold text-[var(--app-danger)]"
+                    className="danger-link mt-1 text-sm font-bold"
                     disabled={disabled}
                     onClick={() => onDeletePhoto(photo.id)}
                   >
@@ -573,15 +683,11 @@ function ObservationList({
 
 function CareGuide({ guide }) {
   return (
-    <dl className="mt-5 grid gap-4 text-sm">
+    <dl className="care-guide-grid">
       {Object.entries(guide).map(([key, value]) => (
         <div key={key}>
-          <dt className="font-black capitalize text-[var(--app-moss-dark)]">
-            {splitKey(key)}
-          </dt>
-          <dd className="mt-1 leading-relaxed text-[var(--app-ink)]">
-            {Array.isArray(value) ? value.join(" • ") : value}
-          </dd>
+          <dt>{splitKey(key)}</dt>
+          <dd>{Array.isArray(value) ? value.join(" • ") : value}</dd>
         </div>
       ))}
     </dl>
@@ -590,11 +696,12 @@ function CareGuide({ guide }) {
 
 function DiagnosisView({ diagnosis }) {
   return (
-    <div className="mt-5 border-t border-[var(--app-border)] pt-5 text-sm text-[var(--app-ink)]">
-      <p className="font-black text-[var(--app-text)]">{diagnosis.summary}</p>
-      <p className="mt-2">
+    <div className="diagnosis-view">
+      <p className="diagnosis-summary">{diagnosis.summary}</p>
+      <p className="mt-3 font-bold">
         Confidence: {Math.round(Number(diagnosis.confidence) * 100)}%
       </p>
+      <List title="Symptoms" items={diagnosis.observedSymptoms} />
       {diagnosis.likelyCauses?.map((item) => (
         <div key={item.cause} className="mt-4">
           <p className="font-black">
@@ -603,9 +710,9 @@ function DiagnosisView({ diagnosis }) {
           <p className="mt-1 leading-relaxed">{item.rationale}</p>
         </div>
       ))}
-      <List title="Recommended actions" items={diagnosis.recommendedActions} />
-      <List title="Monitor next" items={diagnosis.monitorNext} />
-      <List title="Safety" items={diagnosis.urgentSafetyNotes} />
+      <List title="What to do now" items={diagnosis.recommendedActions} />
+      <List title="What to monitor" items={diagnosis.monitorNext} />
+      <List title="Safety / cautions" items={diagnosis.urgentSafetyNotes} />
       {diagnosis.uncertainty && (
         <p className="mt-4 italic">{diagnosis.uncertainty}</p>
       )}
@@ -648,9 +755,9 @@ function FileButton({ label, disabled, onFiles }) {
   );
 }
 
-function SectionHeading({ children }) {
+function SectionHeading({ children, id }) {
   return (
-    <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[var(--app-moss-dark)]">
+    <h2 id={id} className="record-section-title">
       {children}
     </h2>
   );
@@ -661,7 +768,7 @@ function PhotoFrame({ plant }) {
     return (
       <img
         src={plant.photoUrl}
-        alt=""
+        alt={`${plant.plantName} reference`}
         className="aspect-[4/3] w-full rounded-[8px] object-cover"
       />
     );
@@ -674,4 +781,8 @@ function PhotoFrame({ plant }) {
 
 function splitKey(key) {
   return key.replace(/([A-Z])/g, " $1").trim();
+}
+
+function formatDate(value) {
+  return value ? new Date(value).toLocaleDateString() : "";
 }

@@ -1,6 +1,7 @@
 const { requireGardenSession } = require("../../server/garden-session");
 const {
   getPlant,
+  restorePlant,
   softDeletePlant,
   updatePlant,
 } = require("../../server/garden-store");
@@ -29,7 +30,13 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ deleted: true });
     }
 
-    res.setHeader("Allow", "GET, PATCH, DELETE");
+    if (req.method === "POST") {
+      const restored = await restorePlant(id);
+      if (!restored) return res.status(404).json({ error: "Plant not found." });
+      return res.status(200).json({ restored: true });
+    }
+
+    res.setHeader("Allow", "GET, PATCH, DELETE, POST");
     return res.status(405).json({ error: "Method not allowed." });
   } catch (error) {
     return gardenError(res, error);

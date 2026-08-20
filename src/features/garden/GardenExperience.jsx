@@ -6,7 +6,12 @@ import {
   validateFiles,
 } from "../../lib/photos";
 import { MAX_IDENTIFICATION_IMAGES } from "../../lib/plantSchema";
-import { GardenList, GrowPlant, PlantDetail } from "./GardenViews";
+import {
+  DeletedPlants,
+  GardenList,
+  GrowPlant,
+  PlantDetail,
+} from "./GardenViews";
 
 const emptyDraft = {
   plantName: "",
@@ -21,6 +26,7 @@ const emptyDraft = {
 export function GardenExperience({ modeControl, seed, onSeedConsumed }) {
   const [screen, setScreen] = useState("list");
   const [plants, setPlants] = useState([]);
+  const [deletedPlants, setDeletedPlants] = useState([]);
   const [selectedPlant, setSelectedPlant] = useState(null);
   const [draft, setDraft] = useState(emptyDraft);
   const [error, setError] = useState("");
@@ -90,6 +96,37 @@ export function GardenExperience({ modeControl, seed, onSeedConsumed }) {
     setError("");
     setScreen("grow");
   };
+
+  const openDeleted = async () => {
+    setScreen("deleted");
+    setLoading(true);
+    setError("");
+    try {
+      const payload = await apiJson(
+        "/api/garden-plants?view=deleted",
+        {},
+        "Unable to load recently deleted plants.",
+      );
+      setDeletedPlants(payload.plants || []);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const restoreDeletedPlant = async (plant) =>
+    runPlantAction("restore-plant", async () => {
+      await apiJson(
+        `/api/garden-plants/${plant.id}`,
+        { method: "POST" },
+        "Unable to restore this plant.",
+      );
+      setDeletedPlants((current) =>
+        current.filter((item) => item.id !== plant.id),
+      );
+      await loadGarden();
+    });
 
   const addDraftFiles = (fileList) => {
     const additions = Array.from(fileList || []).map(makePhotoPreview);
@@ -379,7 +416,7 @@ export function GardenExperience({ modeControl, seed, onSeedConsumed }) {
   const deletePlant = async () => {
     if (
       !window.confirm(
-        `Delete ${selectedPlant.plantName || "this plant"} from My Garden?`,
+        `Move ${selectedPlant.plantName || "this plant"} to Recently deleted? You can restore it later.`,
       )
     )
       return;
@@ -426,6 +463,17 @@ export function GardenExperience({ modeControl, seed, onSeedConsumed }) {
       />
     );
   }
+  if (screen === "deleted") {
+    return (
+      <DeletedPlants
+        plants={deletedPlants}
+        loading={loading || busy === "restore-plant"}
+        error={error}
+        onBack={() => setScreen("list")}
+        onRestore={restoreDeletedPlant}
+      />
+    );
+  }
   if (screen === "plant" && selectedPlant) {
     return (
       <PlantDetail
@@ -443,6 +491,7 @@ export function GardenExperience({ modeControl, seed, onSeedConsumed }) {
         onCareGuide={generateCareGuide}
         onSaveObservation={saveObservation}
         onDiagnose={diagnose}
+        onPrint={() => window.print()}
       />
     );
   }
@@ -453,6 +502,7 @@ export function GardenExperience({ modeControl, seed, onSeedConsumed }) {
       error={error}
       modeControl={modeControl}
       onGrow={startGrow}
+      onDeleted={openDeleted}
       onOpenPlant={openPlant}
     />
   );
