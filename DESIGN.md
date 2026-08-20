@@ -5,8 +5,8 @@
 The current app is a small Vite React frontend plus one Vercel-compatible serverless function.
 
 - The frontend owns file selection, local preview, loading/error state, and result rendering.
-- The API route owns request orchestration, image validation, rate limiting, OpenAI calls, and response handling. `api/plant-identification-core.js` owns multipart image extraction, model JSON extraction, and result normalization.
-- There is no current database, authentication, persistent storage, or saved plant model.
+- The API route owns request orchestration, image validation, rate limiting, OpenAI calls, and response handling. `server/plant-identification-core.js` owns multipart image extraction, model JSON extraction, and result normalization. `server/rate-limit.js` owns the server-only Supabase rate-limit boundary.
+- There is no current saved-plant database, authentication, persistent plant storage, or saved plant model. The only current database use is bounded server-side rate-limit counters.
 
 ## Current Data Flow
 
@@ -14,7 +14,7 @@ The current app is a small Vite React frontend plus one Vercel-compatible server
 2. Client validation checks image type and size.
 3. `App` sends `FormData` with one `image` file to `/api/identify-plant`.
 4. `api/identify-plant.js` rate-limits the request before expensive work.
-5. The API uses `api/plant-identification-core.js` to extract the multipart image and normalize the model JSON, validates the image, calls OpenAI Responses with image input, and returns `{ result, warning }`.
+5. The API uses `server/plant-identification-core.js` to extract the multipart image and normalize the model JSON, validates the image, calls OpenAI Responses with image input, and returns `{ result, warning }`.
 6. `ResultPanel` renders confidence, alternatives, care traits, warnings, and care sections.
 
 ## Module Responsibilities
@@ -25,13 +25,14 @@ The current app is a small Vite React frontend plus one Vercel-compatible server
 - `src/components/TraitBadge.jsx` and `src/components/CareIcon.jsx`: visual care trait rendering.
 - `src/lib/plantSchema.js`: shared frontend constants and trait copy.
 - `api/identify-plant.js`: server boundary for request orchestration, image validation, rate limiting, OpenAI interaction, and response handling.
-- `api/plant-identification-core.js`: testable server-side parsing and normalization for multipart image input and OpenAI JSON output.
+- `server/plant-identification-core.js`: testable server-side parsing and normalization for multipart image input and OpenAI JSON output.
 
 ## Important Invariants
 
-- The browser never receives OpenAI, Upstash, Vercel KV, Supabase, or owner-passphrase secrets.
+- The browser never receives OpenAI, Supabase database, or owner-passphrase secrets.
 - Server-side rate limiting runs before image parsing and before OpenAI calls.
 - Production fails closed if rate limiting is not configured.
+- Plant ID database objects must stay isolated in the `plant_id` schema and must not alter MemoryEngine or Miscellany objects.
 - AI identification must communicate uncertainty and safety caveats.
 - Future recorded identity and AI assessment must not silently overwrite each other.
 - Future private My Garden access must be authorized server-side for every garden read, write, and photograph request.

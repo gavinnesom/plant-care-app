@@ -13,9 +13,9 @@ The approved product direction is now a private personal garden field guide with
 - Multipart POST to `/api/identify-plant`.
 - Server-side image parsing and validation.
 - OpenAI Responses API call with image input.
-- Strict JSON extraction and normalization through a testable server-side core module.
+- Strict JSON extraction and normalization through a testable server-side core module outside the Vercel API route directory.
 - Care card rendering with confidence, alternatives, trait badges, warnings, expandable sections, and fun fact.
-- Upstash/Vercel KV-backed rate limiting before OpenAI calls.
+- Supabase-backed rate limiting before OpenAI calls using isolated Plant ID database objects.
 - Debug status panel hidden unless `?debug=1`.
 
 ## Verified Commands
@@ -42,8 +42,7 @@ Required server-side environment variables:
 ```text
 OPENAI_API_KEY
 OPENAI_MODEL
-UPSTASH_REDIS_REST_URL or KV_REST_API_URL
-UPSTASH_REDIS_REST_TOKEN or KV_REST_API_TOKEN
+SUPABASE_DB_URL
 PLANT_ID_IP_LIMIT
 PLANT_ID_IP_WINDOW
 PLANT_ID_DAILY_GLOBAL_LIMIT
@@ -73,4 +72,4 @@ PLANT_ID_FORCE_RATE_LIMIT
 
 ## Last Implementation Summary
 
-The standards foundation pass adopted canonical project documents, preserved the approved README product direction, added a small Node unit-test foundation for existing API helper behavior, and kept current product behavior unchanged.
+The production hotfix replaced Redis/Upstash rate limiting with an isolated Supabase/Postgres limiter in the shared GavinApps Supabase project. Plant ID owns only the `plant_id` schema objects from `supabase/migrations/202608200001_plant_id_rate_limits.sql`; MemoryEngine and Miscellany objects remain untouched.

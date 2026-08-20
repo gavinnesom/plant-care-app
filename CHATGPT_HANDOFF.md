@@ -6,125 +6,130 @@ Implemented.
 
 ## Source
 
-ChatGPT review of Codex's completed standards-foundation work in draft PR #1 for `gavinnesom/plant-care-app`.
+ChatGPT review of the completed Part 1 production-hotfix work in draft PR #2, followed by Gavin's authorization to finish and release it.
 
 ## Objective
 
-Finish Part 1 cleanly by replacing the test-only `_test` export with a coherent testable module boundary and correcting the handoff status/reporting, without expanding the milestone.
+Finish Part 1 cleanly: remove any unused Supabase configuration, finalize the project handoff and PR, squash-merge PR #2 into `main`, allow Vercel to deploy it, and prove that Plant ID works on the production custom domain with one real identification request.
 
 ## Background
 
-Codex completed the standards-and-foundation handoff on branch `codex/plant-id-standards-foundation` and opened draft PR #1:
+Part 1 was originally released from PR #1 as squash commit `748832ee99a4c2dace8ea0478a332f3805356d53`, after which production identification failed at the old Redis/Upstash rate-limit boundary.
 
-`https://github.com/gavinnesom/plant-care-app/pull/1`
+The corrective work has now been implemented in draft PR #2:
 
-The work added the canonical project documents, a small unit-test foundation, and four passing tests. The only application-code change exposed existing API helpers through an exported `_test` object on `api/identify-plant.js`.
+- Repository: `gavinnesom/plant-care-app`
+- Branch: `codex/plant-id-production-hotfix`
+- PR: `https://github.com/gavinnesom/plant-care-app/pull/2`
+- Reviewed head: `a369068432b3efa227de9ea7430e9181acf583ba`
+- Redis/Upstash packages, code, and Vercel environment variables have been removed.
+- The rate limiter now uses isolated Plant ID objects in Gavin's existing Supabase project.
+- MemoryEngine and Miscellany were not changed.
+- The shared server module has been moved out of `api/`, so Vercel exposes only the intended `api/identify-plant` function.
+- Nine tests and the frontend build passed.
+- A real Vercel Preview identification returned `200` with a valid Cordyline result and rate-limit headers.
+- Vercel reports a successful check on the current PR head.
 
-That test-only production export is a shortcut rather than a durable responsibility boundary. The same helpers should instead live in a small, coherently named server-side module that is imported normally by both the Vercel handler and the tests. This should remain a limited behavior-preserving correction, not become a wider refactor.
-
-The completed handoff also retained `Status: Active` and described the final Git status ambiguously. The final handoff should say `Implemented` and report the actual final status plainly.
+One cleanup remains: the implementation appears to use only `SUPABASE_DB_URL`, while `SUPABASE_URL` may now be unused. Confirm this from the code rather than assuming it.
 
 ## Current scope
 
-- Continue on the existing branch `codex/plant-id-standards-foundation` and update draft PR #1.
-- Inspect the current `_test` export and the helpers used by `tests/identify-plant.test.cjs`.
-- Remove the test-only `_test` export from the production API handler.
-- Extract only the existing pure or independently testable helpers needed by the tests into a coherently named server-side module.
-- Import those helpers normally from both `api/identify-plant.js` and the tests.
-- Preserve the Vercel handler's expected export and all runtime behavior.
-- Update `CODEMAP.md`, `DESIGN.md`, or other project documents only if the extraction changes a documented path or responsibility.
-- Update this handoff's outcome and set its final status to `Implemented`.
-- Add a normal follow-up commit, push the existing branch, and update the existing draft PR.
+- Continue on `codex/plant-id-production-hotfix` and PR #2. Do not create another branch or PR.
+- Confirm the branch, PR head, and working tree before changing anything. Do not discard unexpected work.
+- Determine whether `SUPABASE_URL` has any runtime use in Plant ID.
+- If it is unused, remove it from repository examples/documentation and from the Plant ID Vercel Preview and Production environments. Do not retain unused configuration for possible future use.
+- If it is genuinely required, retain it and document its exact runtime use in the handoff and final report.
+- Update the canonical repository `CHATGPT_HANDOFF.md` to describe the completed implementation accurately, set its status to `Implemented`, and remove stale or pending statements. Do not try to record the final documentation commit's own SHA inside that commit.
+- Update the PR title if necessary so it describes the actual Supabase-backed production hotfix rather than only the earlier route-packaging fix.
+- Commit and push the final cleanup to the existing branch and PR.
+- Mark PR #2 ready for review, then squash-merge it into `main`. This handoff explicitly authorizes that merge and the resulting Vercel production deployment.
+- After deployment, verify the production custom domain and make one real plant-identification request.
+- Fast-forward the local `main` after the successful release and report the final state.
 
 ## Implementation strategy
 
-Choose the smallest module boundary that reflects a real server-side responsibility. Do not create a generic `utils` or `helpers` bucket merely to satisfy the tests.
-
-Move only the functions required for a clean test boundary and any constants inseparable from them. Keep request orchestration and Vercel handler behavior in the current API entry point.
-
-Add concise narrative comments only where the extracted logic contains a genuinely non-obvious domain step, constraint, or transition. Do not add comments as decoration or perform broad formatting.
-
-Use a new follow-up commit rather than rewriting or force-pushing the existing branch history.
+1. Re-read the applicable global, project, and Gavin AI standards instructions, then inspect the current branch, working tree, PR state, and current Vercel check.
+2. Search the application, server code, configuration, tests, and documentation for `SUPABASE_URL`. Remove it everywhere in Plant ID, including Vercel Preview and Production, only if the code confirms it is unused.
+3. Finalize `CHATGPT_HANDOFF.md`. Record the implementation and pre-merge verification that actually occurred; production verification can be reported in Codex's final response because it happens after the merge.
+4. Run the appropriate safe pre-merge checks, commit the finalization, push it, and confirm PR #2 is current and mergeable with a successful Vercel check.
+5. If the final commit changes only documentation or removes a confirmed-unused environment variable, do not spend another OpenAI call on Preview. If runtime behavior changes, repeat the real Preview identification before merging.
+6. Mark PR #2 ready and squash-merge it into `main` with a clear title and body that summarize the Supabase rate-limit hotfix and removal of Redis/Upstash.
+7. Wait for the production Vercel deployment and custom-domain alias to become ready.
+8. Verify production at `https://plants.gavinnesom.com`, including one authorized real identification request.
+9. Pull local `main` with `git pull --ff-only` and report the squash commit, deployment, production checks, and clean working-tree state.
 
 ## Constraints and non-goals
 
-- Do not begin Part 2 or implement My Garden, Supabase, authentication, saved plants, multiple photographs, or print/PDF features.
-- Do not broaden this into a general API or frontend refactor.
-- Do not change user-visible behavior, response shape, validation rules, rate limits, OpenAI behavior, or styling.
-- Do not add production dependencies unless a currently verified requirement makes one unavoidable; none is expected.
-- Do not modify MemoryEngine, Gavin's standards repository, or anything outside the Plant ID repository.
-- Do not create another branch or pull request.
-- Do not merge PR #1, push to `main`, deploy to production, or change external data or environment variables.
-- An automatic Vercel Preview update caused by pushing the existing branch is allowed.
+- Do not begin Part 2 or implement My Garden, persistence UI, authentication, multi-photo identification, or other new product features.
+- Do not reintroduce Redis, Upstash, fallback code, compatibility code, commented remnants, or unused packages/configuration.
+- Do not delete Gavin's Upstash provider account or unrelated provider resources.
+- Do not change MemoryEngine or Miscellany code, tables, authentication, APIs, or domain logic.
+- Do not alter the new Supabase schema, functions, or rate-limiter behavior unless a blocking defect is discovered before merge. If one is found, stop and report it rather than improvising another implementation round.
+- Do not expose secrets or print secret values in logs, diffs, commits, the handoff, or the final response.
+- Do not use destructive Git operations or overwrite unexpected local changes.
+- One production OpenAI identification request is explicitly authorized for the final smoke test. Do not make unnecessary additional paid requests.
+- If the production verification fails, stop and report the exact failing boundary. Do not make unplanned code or environment changes after the merge.
 
 ## Acceptance criteria
 
-- `api/identify-plant.js` no longer exposes a test-only `_test` object.
-- Tests import the relevant functions through a normal coherent module boundary.
-- Existing runtime behavior and API response behavior remain unchanged.
-- All existing tests pass without reducing coverage or weakening assertions.
-- The production build passes.
-- Applicable project documentation still describes the actual file map and responsibilities.
-- The final handoff status is `Implemented`.
-- The implementation outcome states the final Git status unambiguously.
-- A normal follow-up commit is pushed to the existing branch and appears in draft PR #1.
-- No Part 2 work, merge, main-branch push, or production deployment occurs.
+- PR #2 contains the completed Supabase-backed rate-limit hotfix and no Redis/Upstash application code, dependency, or Plant ID environment configuration.
+- `SUPABASE_URL` is either removed everywhere because it is unused or retained with a precise documented runtime reason.
+- The canonical handoff is internally consistent, marked `Implemented`, and contains no stale “pending” implementation language.
+- The PR title and description accurately summarize its final scope.
+- Required tests, build, diff checks, and Vercel checks pass before merge.
+- PR #2 is squash-merged into `main` and Vercel deploys that commit to `https://plants.gavinnesom.com`.
+- Production homepage returns `200`.
+- A non-POST request to `/api/identify-plant` returns `405` and advertises `POST` as allowed.
+- The obsolete helper route is not deployed as a serverless endpoint.
+- One real production plant-identification POST returns `200`, a valid identification payload, and the expected rate-limit headers/counter behavior.
+- Local `main` is fast-forwarded to the released squash commit and the final working tree is clean.
 
 ## Verification
 
-- `npm test`
-- `npm run build`
-- `git diff --check`
-- Confirm the handler export remains compatible with the existing Vercel route.
-- Confirm `git status --short` is clean after committing and pushing the completed handoff outcome.
-- Report the follow-up commit SHA, changed files, exact check results, and updated draft PR URL.
+Before merge:
+
+- Record `git status --short`, current branch, local HEAD, and PR head.
+- Confirm searches find no Redis/Upstash packages, imports, rate-limit implementation, or Plant ID Vercel environment variables.
+- Confirm the final `SUPABASE_URL` decision against actual code usage.
+- Run `npm test`.
+- Run `npm run build`.
+- Run `git diff --check origin/main...HEAD`.
+- Confirm PR #2 is mergeable and its required Vercel check is successful.
+
+After merge and deployment:
+
+- Confirm the production deployment is Ready and the custom domain aliases to it.
+- Request the homepage and confirm `200`.
+- Make a non-destructive non-POST request to `/api/identify-plant` and confirm `405` with `Allow: POST`.
+- Confirm the former unintended helper route is absent.
+- Submit one real production identification using a suitable plant image; confirm `200`, a valid response, and rate-limit headers.
+- Record the final squash commit and confirm local `main` matches it with a clean working tree.
 
 ## Assumptions and open questions
 
-- The existing branch and draft PR are still available and contain only the authorized Part 1 work.
-- A small coherent extraction is possible without changing behavior. If it is not, stop and explain why rather than preserving `_test` automatically or beginning a larger refactor.
-- No product decision is required for this correction.
+- Gavin has authorized the squash merge, production deployment, Vercel environment cleanup, and one real production OpenAI identification request.
+- The reviewed PR head may advance when this handoff is finalized; Codex should report the actual final pre-merge and squash commit SHAs.
+- No product-design decision is required in this step. Part 2 begins only after this release is proven and Gavin provides a new handoff.
 
 ## Codex implementation outcome
 
-Implemented by Codex on 2026-08-19.
+Implemented on 2026-08-20 before merge.
 
-Branch: `codex/plant-id-standards-foundation`
+- Branch: `codex/plant-id-production-hotfix`.
+- PR: `https://github.com/gavinnesom/plant-care-app/pull/2`.
+- Reviewed starting head: `a369068432b3efa227de9ea7430e9181acf583ba`.
+- `SUPABASE_URL` decision: removed. Runtime code, server code, tests, examples, and docs were searched; Plant ID only reads `SUPABASE_DB_URL` for the Supabase/Postgres rate limiter.
+- Removed `SUPABASE_URL` from `.env.example`, README deployment/setup guidance, `PROJECT_STATUS.md`, and Plant ID Vercel Preview/Production environment variables.
+- Updated the PR title/body to describe the Supabase-backed production hotfix.
 
-Draft PR updated: `https://github.com/gavinnesom/plant-care-app/pull/1`
+Pre-merge verification:
 
-Changed files:
+- Initial branch status was clean on `codex/plant-id-production-hotfix` at `a369068432b3efa227de9ea7430e9181acf583ba`.
+- PR #2 source/target confirmed as `codex/plant-id-production-hotfix` into `main`; PR was clean and Vercel check was successful.
+- Redis/Upstash active-reference scan remained clean outside historical handoff text.
+- `SUPABASE_URL` active-reference scan confirmed no runtime use before removal.
+- `npm test`: pass, 9 tests.
+- `npm run build`: pass; Vite CJS and stale Browserslist warnings only.
+- `git diff --check origin/main...HEAD`: pass.
 
-- `api/plant-identification-core.js`: added the coherent server-side module for multipart image extraction, model JSON extraction, and plant-result normalization.
-- `api/identify-plant.js`: removed the test-only `_test` export and imported the core functions through the normal module boundary while preserving `module.exports = handler`.
-- `tests/identify-plant.test.cjs`: imports the tested functions from `api/plant-identification-core.js` instead of the production handler.
-- `CODEMAP.md`: updated the repository map and change guide for the new server-side module.
-- `DESIGN.md`: updated architecture and module responsibilities to distinguish request orchestration from parsing/normalization.
-- `PROJECT_STATUS.md`: recorded that JSON extraction and normalization now live in a testable server-side core module.
-- `CHATGPT_HANDOFF.md`: replaced the previous completed handoff with this active handoff and outcome, with final status set to `Implemented`.
-
-Verification:
-
-```text
-npm test
-```
-
-Passed: 4 tests, 0 failures.
-
-```text
-npm run build
-```
-
-Passed. Vite reported the same warnings as before: its CJS Node API build is deprecated, and Browserslist/caniuse-lite data is 13 months old.
-
-```text
-git diff --check
-```
-
-Passed with no whitespace errors.
-
-Handler export compatibility was checked directly: `api/identify-plant.js` ends with `module.exports = handler;` and no longer exports `_test`.
-
-No My Garden, Supabase, authentication, saved plants, multiple photographs, print/PDF, styling, response-shape, rate-limit, OpenAI behavior, MemoryEngine, production environment, merge, main-branch push, or production deployment work was performed.
-
-Final `git status --short` after committing and pushing this follow-up was clean.
+Production verification is intentionally not recorded here because it occurs after this committed handoff update and the PR squash merge.

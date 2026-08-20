@@ -22,7 +22,7 @@ Use `npx vercel dev` for end-to-end identification because plain `npm run dev` s
 
 ## Invariants
 
-- Keep OpenAI and Redis credentials server-side only.
+- Keep OpenAI and Supabase database credentials server-side only.
 - Do not implement My Garden, Supabase persistence, owner unlocking, multi-photo identification, printing, or Miscellany integration without explicit scope.
 - Preserve the distinction between temporary AI identification, recorded identity, identity source, and future saved plant records.
 - Do not modify MemoryEngine tables, APIs, authentication, or domain model.
